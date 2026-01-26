@@ -83,6 +83,180 @@ export type Database = {
         }
         Relationships: []
       }
+      email_logs: {
+        Row: {
+          created_at: string
+          email_to: string
+          email_type: string
+          error_message: string | null
+          id: string
+          status: string
+          subject: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_to: string
+          email_type: string
+          error_message?: string | null
+          id?: string
+          status?: string
+          subject: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_to?: string
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          status?: string
+          subject?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      help_articles: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          display_order: number
+          id: string
+          is_published: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_published?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_published?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      offers: {
+        Row: {
+          bonus_amount: number
+          bonus_percentage: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          max_amount: number | null
+          min_amount: number
+          offer_type: string
+          title: string
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          bonus_amount?: number
+          bonus_percentage?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_amount?: number | null
+          min_amount?: number
+          offer_type: string
+          title: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          bonus_amount?: number
+          bonus_percentage?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_amount?: number | null
+          min_amount?: number
+          offer_type?: string
+          title?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      password_reset_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           id: string
@@ -143,17 +317,53 @@ export type Database = {
         }
         Relationships: []
       }
+      social_channels: {
+        Row: {
+          channel_name: string
+          channel_type: string
+          channel_url: string
+          created_at: string
+          display_order: number
+          id: string
+          is_visible: boolean
+          updated_at: string
+        }
+        Insert: {
+          channel_name: string
+          channel_type: string
+          channel_url: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          updated_at?: string
+        }
+        Update: {
+          channel_name?: string
+          channel_type?: string
+          channel_url?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
           admin_override: boolean | null
           amount: number
           closed_at: string | null
           created_at: string
+          duration_seconds: number | null
           entry_price: number
           exit_price: number | null
+          expected_result: string | null
           id: string
           profit_loss: number | null
           status: Database["public"]["Enums"]["trade_status"]
+          timer_started_at: string | null
           trade_type: Database["public"]["Enums"]["trade_type"]
           trading_pair: string
           user_id: string
@@ -163,11 +373,14 @@ export type Database = {
           amount: number
           closed_at?: string | null
           created_at?: string
+          duration_seconds?: number | null
           entry_price: number
           exit_price?: number | null
+          expected_result?: string | null
           id?: string
           profit_loss?: number | null
           status?: Database["public"]["Enums"]["trade_status"]
+          timer_started_at?: string | null
           trade_type: Database["public"]["Enums"]["trade_type"]
           trading_pair: string
           user_id: string
@@ -177,11 +390,14 @@ export type Database = {
           amount?: number
           closed_at?: string | null
           created_at?: string
+          duration_seconds?: number | null
           entry_price?: number
           exit_price?: number | null
+          expected_result?: string | null
           id?: string
           profit_loss?: number | null
           status?: Database["public"]["Enums"]["trade_status"]
+          timer_started_at?: string | null
           trade_type?: Database["public"]["Enums"]["trade_type"]
           trading_pair?: string
           user_id?: string
