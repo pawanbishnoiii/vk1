@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,7 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, formatDate } from '@/lib/constants';
+import { formatINR } from '@/lib/formatters';
+import { formatDate } from '@/lib/constants';
+import EnhancedDeposit from '@/components/deposit/EnhancedDeposit';
+import FloatingSocialButtons from '@/components/social/FloatingSocialButtons';
 import { 
   Wallet as WalletIcon, 
   Plus, 
@@ -19,19 +23,16 @@ import {
   Clock, 
   CheckCircle, 
   XCircle,
-  Copy,
-  Loader2
+  Loader2,
+  ArrowUpRight,
+  ArrowDownLeft,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { z } from 'zod';
 
-const depositSchema = z.object({
-  amount: z.number().min(10, 'Minimum deposit is $10'),
-  transactionHash: z.string().optional(),
-});
-
 const withdrawSchema = z.object({
-  amount: z.number().min(50, 'Minimum withdrawal is $50'),
+  amount: z.number().min(100, 'Minimum withdrawal is ₹100'),
   upiId: z.string().min(5, 'Please enter a valid UPI ID'),
 });
 
@@ -41,8 +42,6 @@ export default function Wallet() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [depositAmount, setDepositAmount] = useState('');
-  const [txHash, setTxHash] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [upiId, setUpiId] = useState('');
 
@@ -78,62 +77,13 @@ export default function Wallet() {
     enabled: !!user?.id,
   });
 
-  // Fetch platform wallet address
-  const { data: platformSettings } = useQuery({
-    queryKey: ['platform-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('*')
-        .eq('key', 'platform_wallet')
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data?.value as { trc20: string; bep20: string } | null;
-    },
-  });
-
-  // Create deposit mutation
-  const createDeposit = useMutation({
-    mutationFn: async (data: { amount: number; transactionHash?: string }) => {
-      const { error } = await supabase
-        .from('deposit_requests')
-        .insert({
-          user_id: user!.id,
-          amount: data.amount,
-          transaction_hash: data.transactionHash,
-          crypto_network: 'TRC20',
-        });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Deposit request submitted',
-        description: 'Your deposit will be reviewed shortly.',
-      });
-      setDepositAmount('');
-      setTxHash('');
-      queryClient.invalidateQueries({ queryKey: ['deposits'] });
-    },
-    onError: (err: any) => {
-      toast({
-        title: 'Failed to submit deposit',
-        description: err.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
   // Create withdrawal mutation
   const createWithdrawal = useMutation({
     mutationFn: async (data: { amount: number; upiId: string }) => {
-      // Check available balance
       if (data.amount > availableBalance) {
         throw new Error('Insufficient available balance');
       }
 
-      // Create withdrawal request
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert({
@@ -145,12 +95,10 @@ export default function Wallet() {
       if (error) throw error;
 
       // Lock the amount
-      const { error: walletError } = await supabase
+      await supabase
         .from('wallets')
         .update({ locked_balance: lockedBalance + data.amount })
         .eq('user_id', user!.id);
-      
-      if (walletError) throw walletError;
     },
     onSuccess: () => {
       toast({
@@ -171,22 +119,6 @@ export default function Wallet() {
     },
   });
 
-  const handleDeposit = () => {
-    const amount = parseFloat(depositAmount);
-    const result = depositSchema.safeParse({ amount, transactionHash: txHash });
-    
-    if (!result.success) {
-      toast({
-        title: 'Invalid input',
-        description: result.error.errors[0].message,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    createDeposit.mutate({ amount, transactionHash: txHash || undefined });
-  };
-
   const handleWithdraw = () => {
     const amount = parseFloat(withdrawAmount);
     const result = withdrawSchema.safeParse({ amount, upiId });
@@ -203,252 +135,248 @@ export default function Wallet() {
     createWithdrawal.mutate({ amount, upiId });
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: 'Copied to clipboard!' });
-  };
-
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
-      case 'approved':
-      case 'paid':
-        return <Badge variant="outline" className="bg-profit/10 text-profit border-profit/30"><CheckCircle className="h-3 w-3 mr-1" /> {status === 'paid' ? 'Paid' : 'Approved'}</Badge>;
-      case 'rejected':
-        return <Badge variant="outline" className="bg-loss/10 text-loss border-loss/30"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    const variants: Record<string, { icon: React.ReactNode; class: string; label: string }> = {
+      pending: { icon: <Clock className="h-3 w-3" />, class: 'bg-warning/10 text-warning border-warning/30', label: 'Pending' },
+      approved: { icon: <CheckCircle className="h-3 w-3" />, class: 'bg-profit/10 text-profit border-profit/30', label: 'Approved' },
+      paid: { icon: <CheckCircle className="h-3 w-3" />, class: 'bg-profit/10 text-profit border-profit/30', label: 'Paid' },
+      rejected: { icon: <XCircle className="h-3 w-3" />, class: 'bg-loss/10 text-loss border-loss/30', label: 'Rejected' },
+    };
+    const variant = variants[status] || variants.pending;
+    return (
+      <Badge variant="outline" className={variant.class}>
+        {variant.icon}
+        <span className="ml-1">{variant.label}</span>
+      </Badge>
+    );
   };
 
   return (
     <UserLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6">
         {/* Balance Overview */}
-        <Card className="gradient-card border-border/50">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-full bg-primary/10">
-                <WalletIcon className="h-6 w-6 text-primary" />
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="border-border/50 bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
+            <CardContent className="p-6 relative">
+              <div className="flex items-center justify-between mb-6">
+                <div className="p-3 rounded-xl bg-primary/10">
+                  <WalletIcon className="h-8 w-8 text-primary" />
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-profit/20 text-profit text-sm">
+                  <TrendingUp className="h-4 w-4" />
+                  Active
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Total Balance</p>
-              <p className="text-3xl font-bold font-mono text-primary">
-                {formatCurrency(balance)}
-              </p>
-            </div>
-            <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Available</p>
-                <p className="font-mono font-semibold text-profit">{formatCurrency(availableBalance)}</p>
+              
+              <div className="space-y-1 mb-6">
+                <p className="text-sm text-muted-foreground">Total Balance</p>
+                <motion.p 
+                  className="text-4xl font-bold font-mono text-primary"
+                  key={balance}
+                  initial={{ scale: 1.1 }}
+                  animate={{ scale: 1 }}
+                >
+                  {formatINR(balance)}
+                </motion.p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Locked</p>
-                <p className="font-mono font-semibold text-warning">{formatCurrency(lockedBalance)}</p>
+              
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-profit/10">
+                    <ArrowDownLeft className="h-5 w-5 text-profit" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Available</p>
+                    <p className="font-mono font-semibold text-profit">{formatINR(availableBalance)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-warning/10">
+                    <Clock className="h-5 w-5 text-warning" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Locked</p>
+                    <p className="font-mono font-semibold text-warning">{formatINR(lockedBalance)}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Deposit/Withdraw Tabs */}
-        <Tabs defaultValue="deposit">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="deposit">
-              <Plus className="h-4 w-4 mr-2" />
-              Deposit
-            </TabsTrigger>
-            <TabsTrigger value="withdraw">
-              <Minus className="h-4 w-4 mr-2" />
-              Withdraw
-            </TabsTrigger>
-          </TabsList>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Tabs defaultValue="deposit">
+            <TabsList className="grid w-full grid-cols-2 h-12">
+              <TabsTrigger value="deposit" className="gap-2 text-base">
+                <Plus className="h-4 w-4" />
+                Deposit
+              </TabsTrigger>
+              <TabsTrigger value="withdraw" className="gap-2 text-base">
+                <Minus className="h-4 w-4" />
+                Withdraw
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="deposit" className="space-y-4">
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle>Deposit USDT</CardTitle>
-                <CardDescription>
-                  Send USDT (TRC20) to the address below and submit your transaction hash
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Platform Wallet Address */}
-                <div className="space-y-2">
-                  <Label>Platform Wallet (TRC20)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      value={platformSettings?.trc20 || 'Loading...'} 
-                      readOnly 
-                      className="font-mono text-sm"
+            <TabsContent value="deposit" className="space-y-4 mt-4">
+              <EnhancedDeposit />
+
+              {/* Deposit History */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ArrowDownLeft className="h-5 w-5 text-profit" />
+                    Deposit History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {depositsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : deposits && deposits.length > 0 ? (
+                    <div className="space-y-3">
+                      {deposits.map((deposit, index) => (
+                        <motion.div 
+                          key={deposit.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 hover:bg-secondary/70 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-profit/10">
+                              <ArrowDownLeft className="h-4 w-4 text-profit" />
+                            </div>
+                            <div>
+                              <p className="font-mono font-semibold">{formatINR(Number(deposit.amount))}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(deposit.created_at)}</p>
+                            </div>
+                          </div>
+                          {getStatusBadge(deposit.status)}
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">No deposit history</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="withdraw" className="space-y-4 mt-4">
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ArrowUpRight className="h-5 w-5 text-primary" />
+                    Withdraw to UPI
+                  </CardTitle>
+                  <CardDescription>
+                    Enter your UPI ID to receive funds
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Amount (INR)</Label>
+                      <span className="text-sm text-muted-foreground">
+                        Available: <span className="font-mono text-foreground">{formatINR(availableBalance)}</span>
+                      </span>
+                    </div>
+                    <Input
+                      type="number"
+                      placeholder="Min ₹100"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      className="font-mono text-lg h-12"
                     />
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => copyToClipboard(platformSettings?.trc20 || '')}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
                   </div>
-                </div>
 
-                {/* Amount */}
-                <div className="space-y-2">
-                  <Label htmlFor="deposit-amount">Amount (USDT)</Label>
-                  <Input
-                    id="deposit-amount"
-                    type="number"
-                    placeholder="100.00"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">Minimum: $10</p>
-                </div>
+                  <div className="space-y-2">
+                    <Label>UPI ID</Label>
+                    <Input
+                      placeholder="yourname@paytm"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
 
-                {/* Transaction Hash */}
-                <div className="space-y-2">
-                  <Label htmlFor="tx-hash">Transaction Hash (Optional)</Label>
-                  <Input
-                    id="tx-hash"
-                    placeholder="0x..."
-                    value={txHash}
-                    onChange={(e) => setTxHash(e.target.value)}
-                  />
-                </div>
+                  <Button 
+                    className="w-full h-12 text-base"
+                    onClick={handleWithdraw}
+                    disabled={createWithdrawal.isPending || availableBalance < 100}
+                  >
+                    {createWithdrawal.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowUpRight className="mr-2 h-4 w-4" />
+                        Submit Withdrawal
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
 
-                <Button 
-                  className="w-full" 
-                  onClick={handleDeposit}
-                  disabled={createDeposit.isPending}
-                >
-                  {createDeposit.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
+              {/* Withdrawal History */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ArrowUpRight className="h-5 w-5 text-primary" />
+                    Withdrawal History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {withdrawalsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : withdrawals && withdrawals.length > 0 ? (
+                    <div className="space-y-3">
+                      {withdrawals.map((withdrawal, index) => (
+                        <motion.div 
+                          key={withdrawal.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex items-center justify-between p-4 rounded-xl bg-secondary/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <ArrowUpRight className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-mono font-semibold">{formatINR(Number(withdrawal.amount))}</p>
+                              <p className="text-xs text-muted-foreground">{withdrawal.upi_id}</p>
+                            </div>
+                          </div>
+                          {getStatusBadge(withdrawal.status)}
+                        </motion.div>
+                      ))}
+                    </div>
                   ) : (
-                    'Submit Deposit Request'
+                    <p className="text-center text-muted-foreground py-8">No withdrawal history</p>
                   )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Deposit History */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="text-base">Deposit History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {depositsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : deposits && deposits.length > 0 ? (
-                  <div className="space-y-3">
-                    {deposits.map((deposit) => (
-                      <div key={deposit.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                        <div>
-                          <p className="font-mono font-semibold">{formatCurrency(Number(deposit.amount))}</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(deposit.created_at)}</p>
-                        </div>
-                        {getStatusBadge(deposit.status)}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">No deposit history</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="withdraw" className="space-y-4">
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle>Withdraw to UPI</CardTitle>
-                <CardDescription>
-                  Enter your UPI ID to receive funds
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Amount */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="withdraw-amount">Amount (USDT)</Label>
-                    <span className="text-sm text-muted-foreground">
-                      Available: <span className="text-foreground font-mono">{formatCurrency(availableBalance)}</span>
-                    </span>
-                  </div>
-                  <Input
-                    id="withdraw-amount"
-                    type="number"
-                    placeholder="100.00"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">Minimum: $50</p>
-                </div>
-
-                {/* UPI ID */}
-                <div className="space-y-2">
-                  <Label htmlFor="upi-id">UPI ID</Label>
-                  <Input
-                    id="upi-id"
-                    placeholder="yourname@paytm"
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                  />
-                </div>
-
-                <Button 
-                  className="w-full" 
-                  onClick={handleWithdraw}
-                  disabled={createWithdrawal.isPending || availableBalance < 50}
-                >
-                  {createWithdrawal.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Withdrawal Request'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Withdrawal History */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="text-base">Withdrawal History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {withdrawalsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : withdrawals && withdrawals.length > 0 ? (
-                  <div className="space-y-3">
-                    {withdrawals.map((withdrawal) => (
-                      <div key={withdrawal.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                        <div>
-                          <p className="font-mono font-semibold">{formatCurrency(Number(withdrawal.amount))}</p>
-                          <p className="text-xs text-muted-foreground">{withdrawal.upi_id}</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(withdrawal.created_at)}</p>
-                        </div>
-                        {getStatusBadge(withdrawal.status)}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">No withdrawal history</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </motion.div>
       </div>
+
+      <FloatingSocialButtons />
     </UserLayout>
   );
 }
