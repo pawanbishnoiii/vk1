@@ -1,15 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
 import { usePrices } from '@/hooks/usePrices';
-import { supabase } from '@/integrations/supabase/client';
 import UserLayout from '@/components/layouts/UserLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
   Select, 
   SelectContent, 
@@ -17,40 +13,21 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, formatPercent, TRADING_PAIRS, TradingPair } from '@/lib/constants';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Loader2,
-  AlertTriangle
-} from 'lucide-react';
+import { formatINR } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import TradingViewWidget from '@/components/TradingViewWidget';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import TradePanel from '@/components/trade/TradePanel';
+import FloatingSocialButtons from '@/components/social/FloatingSocialButtons';
+import { TrendingUp, TrendingDown, Activity, Zap } from 'lucide-react';
 
 export default function Trade() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { balance, refetch: refetchWallet } = useWallet();
+  const { balance } = useWallet();
   const { prices, isConnected } = usePrices();
-  const { toast } = useToast();
 
   const [selectedPair, setSelectedPair] = useState<TradingPair>(TRADING_PAIRS[0]);
-  const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
-  const [amount, setAmount] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showRiskWarning, setShowRiskWarning] = useState(false);
-  const [pendingTrade, setPendingTrade] = useState<{type: 'buy' | 'sell', amount: number} | null>(null);
 
   // Set initial pair from URL
   useEffect(() => {
@@ -64,123 +41,17 @@ export default function Trade() {
   const priceData = prices[selectedPair.symbol];
   const currentPrice = priceData?.price || 0;
   const change24h = priceData?.change24h || 0;
-
-  const amountNum = parseFloat(amount) || 0;
-  const isValidAmount = amountNum > 0 && amountNum <= balance;
-
-  const handleQuickAmount = (percent: number) => {
-    const quickAmount = (balance * percent / 100).toFixed(2);
-    setAmount(quickAmount);
-  };
-
-  const handleTrade = async () => {
-    if (!isValidAmount || !user || currentPrice <= 0) return;
-
-    // Show risk warning on first trade
-    const hasSeenWarning = localStorage.getItem('hasSeenTradeWarning');
-    if (!hasSeenWarning) {
-      setPendingTrade({ type: tradeType, amount: amountNum });
-      setShowRiskWarning(true);
-      return;
-    }
-
-    await executeTrade(tradeType, amountNum);
-  };
-
-  const executeTrade = async (type: 'buy' | 'sell', tradeAmount: number) => {
-    setIsLoading(true);
-
-    try {
-      // Create the trade record
-      const { data: trade, error } = await supabase
-        .from('trades')
-        .insert({
-          user_id: user!.id,
-          trading_pair: selectedPair.symbol,
-          trade_type: type,
-          amount: tradeAmount,
-          entry_price: currentPrice,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Simulate trade result (in production, this would be handled by edge function)
-      // For MVP, we'll close the trade immediately with a random outcome
-      const won = Math.random() > 0.5; // 50% win rate for demo
-      const multiplier = won ? 1.8 : 0; // 80% profit on win, 100% loss on loss
-      const profitLoss = won ? tradeAmount * 0.8 : -tradeAmount;
-
-      // Update trade with result
-      await supabase
-        .from('trades')
-        .update({
-          exit_price: currentPrice * (won ? 1.01 : 0.99),
-          profit_loss: profitLoss,
-          status: won ? 'won' : 'lost',
-          closed_at: new Date().toISOString(),
-        })
-        .eq('id', trade.id);
-
-      // Update wallet balance
-      const newBalance = balance + profitLoss;
-      await supabase
-        .from('wallets')
-        .update({ balance: newBalance })
-        .eq('user_id', user!.id);
-
-      // Record transaction
-      await supabase
-        .from('transactions')
-        .insert({
-          user_id: user!.id,
-          type: won ? 'trade_win' : 'trade_loss',
-          amount: profitLoss,
-          balance_before: balance,
-          balance_after: newBalance,
-          reference_id: trade.id,
-          description: `${type.toUpperCase()} ${selectedPair.symbol} - ${won ? 'Won' : 'Lost'}`,
-        });
-
-      toast({
-        title: won ? '🎉 Trade Won!' : '📉 Trade Lost',
-        description: won 
-          ? `You won ${formatCurrency(profitLoss)}!`
-          : `You lost ${formatCurrency(Math.abs(profitLoss))}`,
-        variant: won ? 'default' : 'destructive',
-      });
-
-      setAmount('');
-      refetchWallet();
-
-    } catch (err: any) {
-      console.error('Trade error:', err);
-      toast({
-        title: 'Trade failed',
-        description: err.message || 'Something went wrong',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRiskWarningConfirm = () => {
-    localStorage.setItem('hasSeenTradeWarning', 'true');
-    setShowRiskWarning(false);
-    if (pendingTrade) {
-      executeTrade(pendingTrade.type, pendingTrade.amount);
-      setPendingTrade(null);
-    }
-  };
+  const isPositive = change24h >= 0;
 
   return (
     <UserLayout>
-      <div className="space-y-4 animate-fade-in">
-        {/* Pair Selector & Price */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="space-y-4">
+        {/* Header with Pair Selector */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
           <div className="flex items-center gap-4">
             <Select 
               value={selectedPair.symbol} 
@@ -189,15 +60,15 @@ export default function Trade() {
                 if (pair) setSelectedPair(pair);
               }}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-44 h-12">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {TRADING_PAIRS.map((pair) => (
                   <SelectItem key={pair.symbol} value={pair.symbol}>
                     <div className="flex items-center gap-2">
-                      <span>{pair.icon}</span>
-                      <span>{pair.symbol}</span>
+                      <span className="text-lg">{pair.icon}</span>
+                      <span className="font-medium">{pair.symbol}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -205,7 +76,7 @@ export default function Trade() {
             </Select>
 
             <div className={cn(
-              "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium",
               isConnected ? "bg-profit/20 text-profit" : "bg-warning/20 text-warning"
             )}>
               <span className={cn(
@@ -216,149 +87,99 @@ export default function Trade() {
             </div>
           </div>
 
-          <div className="text-right">
-            <p className="text-2xl font-bold font-mono">
-              {currentPrice > 0 ? formatCurrency(currentPrice, selectedPair.decimals) : '--'}
+          {/* Price Display */}
+          <motion.div 
+            className="text-right"
+            key={currentPrice}
+            initial={{ scale: 1 }}
+            animate={{ scale: [1, 1.02, 1] }}
+            transition={{ duration: 0.3 }}
+          >
+            <p className="text-3xl font-bold font-mono">
+              {currentPrice > 0 ? `$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: selectedPair.decimals, maximumFractionDigits: selectedPair.decimals })}` : '--'}
             </p>
-            <p className={cn(
-              "text-sm font-mono",
-              change24h >= 0 ? "text-profit" : "text-loss"
+            <div className={cn(
+              "flex items-center justify-end gap-1 text-sm font-mono",
+              isPositive ? "text-profit" : "text-loss"
             )}>
-              {change24h !== 0 ? formatPercent(change24h) : '--'} 24h
-            </p>
-          </div>
-        </div>
+              {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              {change24h !== 0 ? formatPercent(change24h) : '--'} (24h)
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Quick Stats */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-3 gap-3"
+        >
+          <Card className="border-border/50 bg-gradient-to-br from-card to-secondary/30">
+            <CardContent className="p-3 text-center">
+              <p className="text-xs text-muted-foreground">24h High</p>
+              <p className="font-mono font-semibold text-profit">
+                ${(currentPrice * 1.02).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50 bg-gradient-to-br from-card to-secondary/30">
+            <CardContent className="p-3 text-center">
+              <p className="text-xs text-muted-foreground">24h Low</p>
+              <p className="font-mono font-semibold text-loss">
+                ${(currentPrice * 0.98).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50 bg-gradient-to-br from-card to-secondary/30">
+            <CardContent className="p-3 text-center">
+              <p className="text-xs text-muted-foreground">Your Balance</p>
+              <p className="font-mono font-semibold text-primary">
+                {formatINR(balance)}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* TradingView Chart */}
-        <Card className="border-border/50 overflow-hidden">
-          <CardContent className="p-0">
-            <div className="h-[400px] md:h-[500px]">
-              <TradingViewWidget symbol={`BINANCE:${selectedPair.base}USDT`} />
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="border-border/50 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="h-[350px] md:h-[450px]">
+                <TradingViewWidget symbol={`BINANCE:${selectedPair.base}USDT`} />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Trading Panel */}
-        <Card className="border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Place Order</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Buy/Sell Tabs */}
-            <Tabs value={tradeType} onValueChange={(v) => setTradeType(v as 'buy' | 'sell')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger 
-                  value="buy" 
-                  className="data-[state=active]:bg-profit data-[state=active]:text-profit-foreground"
-                >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Buy / Long
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="sell"
-                  className="data-[state=active]:bg-loss data-[state=active]:text-loss-foreground"
-                >
-                  <TrendingDown className="h-4 w-4 mr-2" />
-                  Sell / Short
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <TradePanel 
+            selectedPair={selectedPair}
+            currentPrice={currentPrice}
+          />
+        </motion.div>
 
-            {/* Amount Input */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="amount">Amount (USDT)</Label>
-                <span className="text-sm text-muted-foreground">
-                  Available: <span className="text-foreground font-mono">{formatCurrency(balance)}</span>
-                </span>
-              </div>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="font-mono text-lg"
-              />
-            </div>
-
-            {/* Quick Amount Buttons */}
-            <div className="flex gap-2">
-              {[25, 50, 75, 100].map((percent) => (
-                <Button
-                  key={percent}
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleQuickAmount(percent)}
-                  disabled={balance <= 0}
-                >
-                  {percent}%
-                </Button>
-              ))}
-            </div>
-
-            {/* Trade Button */}
-            <Button
-              className={cn(
-                "w-full h-12 text-lg font-semibold",
-                tradeType === 'buy' 
-                  ? "bg-profit hover:bg-profit/90" 
-                  : "bg-loss hover:bg-loss/90"
-              )}
-              disabled={!isValidAmount || isLoading || currentPrice <= 0}
-              onClick={handleTrade}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  {tradeType === 'buy' ? 'Buy' : 'Sell'} {selectedPair.base}
-                </>
-              )}
-            </Button>
-
-            {/* Balance Warning */}
-            {amountNum > balance && (
-              <p className="text-sm text-destructive text-center">
-                Insufficient balance
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Risk Warning Dialog */}
-        <AlertDialog open={showRiskWarning} onOpenChange={setShowRiskWarning}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                Risk Warning
-              </AlertDialogTitle>
-              <AlertDialogDescription className="space-y-3">
-                <p>
-                  Trading cryptocurrencies involves significant risk. You may lose some or all of your investment.
-                </p>
-                <p>
-                  Only trade with funds you can afford to lose. Past performance is not indicative of future results.
-                </p>
-                <p className="font-semibold">
-                  Do you understand and accept these risks?
-                </p>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingTrade(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleRiskWarningConfirm}>
-                I Understand, Continue
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Risk Disclaimer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="text-center text-xs text-muted-foreground p-4"
+        >
+          <p>⚠️ Trading involves risk. Only trade with funds you can afford to lose.</p>
+        </motion.div>
       </div>
+
+      <FloatingSocialButtons />
     </UserLayout>
   );
 }
