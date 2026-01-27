@@ -16,6 +16,7 @@ import { formatINR } from '@/lib/formatters';
 import { formatDate } from '@/lib/constants';
 import EnhancedDeposit from '@/components/deposit/EnhancedDeposit';
 import FloatingSocialButtons from '@/components/social/FloatingSocialButtons';
+import BonusSection from '@/components/bonus/BonusSection';
 import { 
   Wallet as WalletIcon, 
   Plus, 
@@ -215,7 +216,7 @@ export default function Wallet() {
           transition={{ delay: 0.1 }}
         >
           <Tabs defaultValue="deposit">
-            <TabsList className="grid w-full grid-cols-2 h-12">
+            <TabsList className="grid w-full grid-cols-3 h-12">
               <TabsTrigger value="deposit" className="gap-2 text-base">
                 <Plus className="h-4 w-4" />
                 Deposit
@@ -223,6 +224,9 @@ export default function Wallet() {
               <TabsTrigger value="withdraw" className="gap-2 text-base">
                 <Minus className="h-4 w-4" />
                 Withdraw
+              </TabsTrigger>
+              <TabsTrigger value="bonus" className="gap-2 text-base">
+                🎁 Bonus
               </TabsTrigger>
             </TabsList>
 
@@ -371,6 +375,10 @@ export default function Wallet() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="bonus" className="mt-4">
+              <BonusSection />
             </TabsContent>
           </Tabs>
         </motion.div>
