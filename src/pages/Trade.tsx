@@ -17,7 +17,7 @@ import { formatCurrency, formatPercent, TRADING_PAIRS, TradingPair } from '@/lib
 import { formatINR } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import TradingViewWidget from '@/components/TradingViewWidget';
-import TradePanel from '@/components/trade/TradePanel';
+import EnhancedTradePanel from '@/components/trade/EnhancedTradePanel';
 import FloatingSocialButtons from '@/components/social/FloatingSocialButtons';
 import { TrendingUp, TrendingDown, Activity, Zap } from 'lucide-react';
 
@@ -162,7 +162,7 @@ export default function Trade() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <TradePanel 
+          <EnhancedTradePanel 
             selectedPair={selectedPair}
             currentPrice={currentPrice}
           />

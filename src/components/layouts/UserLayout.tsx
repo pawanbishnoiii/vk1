@@ -1,8 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
+import { useLenis } from '@/hooks/useLenis';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/constants';
+import { formatINR } from '@/lib/formatters';
 import { 
   Home, 
   LineChart, 
@@ -13,7 +14,8 @@ import {
   Menu,
   X,
   TrendingUp,
-  User
+  User,
+  HelpCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -23,6 +25,7 @@ const navItems = [
   { label: 'Trade', path: '/trade', icon: LineChart },
   { label: 'Wallet', path: '/wallet', icon: Wallet },
   { label: 'History', path: '/history', icon: History },
+  { label: 'Help', path: '/help', icon: HelpCircle },
 ];
 
 interface UserLayoutProps {
@@ -34,6 +37,9 @@ export default function UserLayout({ children }: UserLayoutProps) {
   const { balance } = useWallet();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Enable smooth scrolling
+  useLenis();
 
   const handleSignOut = async () => {
     await signOut();
@@ -57,7 +63,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary">
               <Wallet className="h-4 w-4 text-primary" />
               <span className="font-mono font-semibold text-primary">
-                {formatCurrency(balance)}
+                {formatINR(balance)}
               </span>
             </div>
           </div>
@@ -102,7 +108,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
               <div className="flex items-center justify-between p-3 rounded-lg bg-secondary">
                 <span className="text-sm text-muted-foreground">Balance</span>
                 <span className="font-mono font-semibold text-primary">
-                  {formatCurrency(balance)}
+                  {formatINR(balance)}
                 </span>
               </div>
 

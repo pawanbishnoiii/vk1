@@ -440,6 +440,56 @@ export type Database = {
         }
         Relationships: []
       }
+      user_bonuses: {
+        Row: {
+          bonus_amount: number
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          offer_id: string | null
+          status: string
+          user_id: string
+          wagering_completed: number
+          wagering_required: number
+        }
+        Insert: {
+          bonus_amount?: number
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          offer_id?: string | null
+          status?: string
+          user_id: string
+          wagering_completed?: number
+          wagering_required?: number
+        }
+        Update: {
+          bonus_amount?: number
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          offer_id?: string | null
+          status?: string
+          user_id?: string
+          wagering_completed?: number
+          wagering_required?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_bonuses_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
