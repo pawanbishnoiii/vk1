@@ -185,6 +185,18 @@ export default function Wallet() {
                 </motion.p>
               </div>
               
+              {/* Total Credit Summary */}
+              <div className="p-3 rounded-lg bg-secondary/50 mb-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Total Credited (Deposits + Bonuses)</span>
+                  <span className="font-mono font-semibold text-profit">
+                    {formatINR(
+                      (deposits?.filter(d => d.status === 'approved').reduce((acc, d) => acc + Number(d.amount), 0) || 0)
+                    )}
+                  </span>
+                </div>
+              </div>
+              
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-profit/10">

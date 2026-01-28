@@ -69,12 +69,14 @@ serve(async (req: Request) => {
       .update({ processing_status: "processing" })
       .eq("id", tradeId);
 
-    // Get platform settings for win rate
+    // Get platform settings for win rate and profit percentages
     const { data: settings } = await supabaseAdmin
       .from("platform_settings")
       .select("key, value");
 
     const globalWinRate = settings?.find(s => s.key === "global_win_rate")?.value || 45;
+    const profitPercent = Number(settings?.find(s => s.key === "profit_percentage")?.value) || 80;
+    const lossPercent = Number(settings?.find(s => s.key === "loss_percentage")?.value) || 100;
 
     // Determine result
     let won = false;
@@ -87,10 +89,11 @@ serve(async (req: Request) => {
       won = Math.random() * 100 < Number(globalWinRate);
     }
 
-    // Calculate profit/loss
+    // Calculate profit/loss using dynamic percentages
     const amount = Number(trade.amount);
-    const profitPercentage = trade.profit_percentage || 80;
-    const profitLoss = won ? amount * (profitPercentage / 100) : -amount;
+    const profitPercentage = trade.profit_percentage || profitPercent;
+    const lossPercentage = lossPercent;
+    const profitLoss = won ? amount * (profitPercentage / 100) : -(amount * (lossPercentage / 100));
 
     // Get current wallet balance
     const { data: wallet } = await supabaseAdmin

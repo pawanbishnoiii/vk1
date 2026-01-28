@@ -21,6 +21,8 @@ export default function AdminSettings() {
     min_withdrawal: 100,
     max_withdrawal: 50000,
     global_win_rate: 50,
+    profit_percentage: 80,
+    loss_percentage: 100,
     platform_name: 'CryptoTrade Pro',
     support_email: '',
     smtp_host: '',
@@ -40,6 +42,8 @@ export default function AdminSettings() {
         min_withdrawal: settings.min_withdrawal || 100,
         max_withdrawal: settings.max_withdrawal || 50000,
         global_win_rate: settings.global_win_rate || 50,
+        profit_percentage: settings.profit_percentage || 80,
+        loss_percentage: settings.loss_percentage || 100,
         platform_name: settings.platform_name || 'CryptoTrade Pro',
         support_email: settings.support_email || '',
         smtp_host: settings.smtp_host || '',
@@ -128,6 +132,40 @@ export default function AdminSettings() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Probability of trades winning (can override per trade)
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Win Profit Percentage (%)</Label>
+                  <span className="font-mono font-semibold text-profit">{formData.profit_percentage}%</span>
+                </div>
+                <Slider
+                  value={[formData.profit_percentage]}
+                  onValueChange={([value]) => setFormData({ ...formData, profit_percentage: value })}
+                  min={10}
+                  max={200}
+                  step={5}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Profit % user gets on winning trades
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Loss Percentage (%)</Label>
+                  <span className="font-mono font-semibold text-loss">{formData.loss_percentage}%</span>
+                </div>
+                <Slider
+                  value={[formData.loss_percentage]}
+                  onValueChange={([value]) => setFormData({ ...formData, loss_percentage: value })}
+                  min={50}
+                  max={100}
+                  step={5}
+                />
+                <p className="text-xs text-muted-foreground">
+                  % of amount lost on losing trades (100% = full amount)
                 </p>
               </div>
             </CardContent>

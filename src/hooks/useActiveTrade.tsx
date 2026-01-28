@@ -10,6 +10,7 @@ import { SOUNDS, soundManager } from '@/lib/sounds';
 
 interface Trade {
   id: string;
+  display_id: number | null;
   user_id: string;
   trading_pair: string;
   trade_type: 'buy' | 'sell';

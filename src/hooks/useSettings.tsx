@@ -9,6 +9,8 @@ interface PlatformSettings {
   min_withdrawal: number;
   max_withdrawal: number;
   global_win_rate: number;
+  profit_percentage: number;
+  loss_percentage: number;
   platform_name: string;
   support_email: string;
   currency_symbol: string;

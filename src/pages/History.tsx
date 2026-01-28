@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 
 interface Trade {
   id: string;
+  display_id: number | null;
   user_id: string;
   trading_pair: string;
   trade_type: 'buy' | 'sell';
@@ -41,6 +42,18 @@ interface Trade {
   timer_started_at: string | null;
   created_at: string;
   closed_at: string | null;
+}
+
+interface Transaction {
+  id: string;
+  display_id: number | null;
+  user_id: string;
+  type: string;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  description: string | null;
+  created_at: string;
 }
 
 export default function History() {
@@ -353,6 +366,11 @@ export default function History() {
                                 )}>
                                   {trade.trade_type.toUpperCase()}
                                 </Badge>
+                                {trade.display_id && (
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    #{trade.display_id}
+                                  </span>
+                                )}
                               </div>
                               <p className="text-sm text-muted-foreground">
                                 Amount: {formatINR(Number(trade.amount))}
@@ -418,7 +436,14 @@ export default function History() {
                             {getTransactionIcon(tx.type)}
                           </div>
                           <div>
-                            <p className="font-medium capitalize">{tx.type.replace('_', ' ')}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium capitalize">{tx.type.replace('_', ' ')}</p>
+                              {(tx as Transaction).display_id && (
+                                <span className="text-xs text-muted-foreground font-mono">
+                                  #{(tx as Transaction).display_id}
+                                </span>
+                              )}
+                            </div>
                             {tx.description && (
                               <p className="text-sm text-muted-foreground">{tx.description}</p>
                             )}

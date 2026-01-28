@@ -21,6 +21,7 @@ import AdminDeposits from "./pages/admin/AdminDeposits";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 import AdminTrades from "./pages/admin/AdminTrades";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminBonuses from "./pages/admin/AdminBonuses";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,9 @@ const App = () => (
             } />
             <Route path="/admin/settings" element={
               <AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>
+            } />
+            <Route path="/admin/bonuses" element={
+              <AdminProtectedRoute><AdminBonuses /></AdminProtectedRoute>
             } />
             
             <Route path="*" element={<NotFound />} />
