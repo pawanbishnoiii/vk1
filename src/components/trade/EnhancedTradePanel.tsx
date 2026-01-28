@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
 import { useActiveTrade } from '@/hooks/useActiveTrade';
 import { useTradeSettings } from '@/hooks/useTradeSettings';
+import { useSettings } from '@/hooks/useSettings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,8 @@ import {
   Volume2,
   VolumeX,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  Hash
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +45,7 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
     tradeDuration 
   } = useActiveTrade();
   const { tradeSettings } = useTradeSettings();
+  const { settings } = useSettings();
   const { toast } = useToast();
 
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
@@ -55,6 +58,8 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
   const minAmount = tradeSettings?.min_trade_amount || 10;
   const maxAmount = tradeSettings?.max_trade_amount || 100000;
   const isTradingEnabled = tradeSettings?.is_trading_enabled ?? true;
+  const profitPercentage = settings?.profit_percentage || 80;
+  const lossPercentage = settings?.loss_percentage || 100;
   
   const isValidAmount = amountNum >= minAmount && 
                         amountNum <= maxAmount && 
@@ -236,6 +241,18 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
 
                   {/* Trade Info */}
                   <div className="space-y-3">
+                    {/* Trade ID */}
+                    {activeTrade.display_id && (
+                      <motion.div 
+                        className="flex items-center justify-center gap-1 text-xs text-muted-foreground"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <Hash className="h-3 w-3" />
+                        Trade ID: <span className="font-mono font-semibold">#{activeTrade.display_id}</span>
+                      </motion.div>
+                    )}
+                    
                     <motion.div 
                       className="flex items-center justify-center gap-2"
                       initial={{ opacity: 0, y: 10 }}
@@ -267,8 +284,8 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
                         )}
                       >
                         {tradeResult === 'won' 
-                          ? `+${formatINR(Number(activeTrade.amount) * 0.8)}` 
-                          : `-${formatINR(Number(activeTrade.amount))}`
+                          ? `+${formatINR(Number(activeTrade.amount) * (profitPercentage / 100))}` 
+                          : `-${formatINR(Number(activeTrade.amount) * (lossPercentage / 100))}`
                         }
                       </motion.div>
                     )}
@@ -376,9 +393,9 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
                     animate={{ opacity: 1, height: 'auto' }}
                     className="flex items-center justify-between p-3 rounded-lg bg-profit/10 border border-profit/20"
                   >
-                    <span className="text-sm">Potential Profit:</span>
+                    <span className="text-sm">Potential Profit ({profitPercentage}%):</span>
                     <span className="font-mono font-semibold text-profit">
-                      +{formatINR(amountNum * 0.8)}
+                      +{formatINR(amountNum * (profitPercentage / 100))}
                     </span>
                   </motion.div>
                 )}

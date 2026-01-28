@@ -11,9 +11,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { TrendingUp, Search, Mail, ArrowLeft, HelpCircle, Loader2 } from 'lucide-react';
+import { TrendingUp, Search, Mail, ArrowLeft, HelpCircle, Loader2, MessageCircle, Phone } from 'lucide-react';
 import { useSocialChannels } from '@/hooks/useSocialChannels';
 import { useSettings } from '@/hooks/useSettings';
+import { motion } from 'framer-motion';
 
 interface HelpArticle {
   id: string;
@@ -24,7 +25,7 @@ interface HelpArticle {
 
 export default function Help() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { whatsappChannel, telegramChannel } = useSocialChannels();
+  const { whatsappChannel, telegramChannel, channels } = useSocialChannels();
   const { settings } = useSettings();
 
   const { data: articles, isLoading } = useQuery({
@@ -68,6 +69,18 @@ export default function Help() {
     {
       question: 'Is my money safe?',
       answer: 'Yes, all funds are secured in our platform. We use industry-standard security measures to protect your account and funds.',
+    },
+    {
+      question: 'What is the profit percentage?',
+      answer: 'When you win a trade, you earn a profit percentage set by the platform (usually 80%). For example, if you trade ₹1000 and win, you get ₹1800 back.',
+    },
+    {
+      question: 'How are trade results determined?',
+      answer: 'Trade results are automatically determined when the timer completes. The outcome is based on market conditions and platform settings.',
+    },
+    {
+      question: 'Can I cancel an active trade?',
+      answer: 'No, once a trade is placed, it cannot be cancelled. The result will be determined when the timer expires.',
     },
   ];
 
@@ -154,7 +167,7 @@ export default function Help() {
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" />
+              <MessageCircle className="h-5 w-5 text-primary" />
               Contact Support
             </CardTitle>
           </CardHeader>
@@ -165,20 +178,26 @@ export default function Help() {
             
             <div className="grid gap-3 sm:grid-cols-2">
               {settings?.support_email && (
-                <a
+                <motion.a
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   href={`mailto:${settings.support_email}`}
                   className="flex items-center gap-3 p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
                 >
-                  <Mail className="h-5 w-5 text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mail className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
                     <p className="font-medium">Email Support</p>
                     <p className="text-sm text-muted-foreground">{settings.support_email}</p>
                   </div>
-                </a>
+                </motion.a>
               )}
               
               {whatsappChannel && (
-                <a
+                <motion.a
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   href={whatsappChannel.channel_url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -193,11 +212,13 @@ export default function Help() {
                     <p className="font-medium">WhatsApp</p>
                     <p className="text-sm text-muted-foreground">{whatsappChannel.channel_name}</p>
                   </div>
-                </a>
+                </motion.a>
               )}
               
               {telegramChannel && (
-                <a
+                <motion.a
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   href={telegramChannel.channel_url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -212,8 +233,68 @@ export default function Help() {
                     <p className="font-medium">Telegram</p>
                     <p className="text-sm text-muted-foreground">{telegramChannel.channel_name}</p>
                   </div>
-                </a>
+                </motion.a>
               )}
+            </div>
+
+            {/* Social Channels List */}
+            {channels && channels.length > 0 && (
+              <div className="pt-4 border-t border-border/50">
+                <p className="text-sm font-medium mb-3">Follow us on social media:</p>
+                <div className="flex flex-wrap gap-2">
+                  {channels.map((channel) => (
+                    <motion.a
+                      key={channel.id}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      href={channel.channel_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-full bg-secondary text-sm font-medium hover:bg-secondary/80 transition-colors"
+                    >
+                      {channel.channel_name}
+                    </motion.a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Links */}
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-primary" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Button variant="outline" className="h-auto py-4" asChild>
+                <Link to="/wallet">
+                  <div className="text-center">
+                    <span className="text-2xl block mb-1">💰</span>
+                    <span>Deposit Funds</span>
+                  </div>
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-auto py-4" asChild>
+                <Link to="/trade">
+                  <div className="text-center">
+                    <span className="text-2xl block mb-1">📈</span>
+                    <span>Start Trading</span>
+                  </div>
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-auto py-4" asChild>
+                <Link to="/history">
+                  <div className="text-center">
+                    <span className="text-2xl block mb-1">📊</span>
+                    <span>View History</span>
+                  </div>
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

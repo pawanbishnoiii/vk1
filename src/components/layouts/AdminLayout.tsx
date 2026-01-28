@@ -27,9 +27,7 @@ const navItems = [
   { label: 'Deposits', path: '/admin/deposits', icon: ArrowDownCircle },
   { label: 'Withdrawals', path: '/admin/withdrawals', icon: ArrowUpCircle },
   { label: 'Trades', path: '/admin/trades', icon: LineChart },
-  { label: 'Offers', path: '/admin/offers', icon: Gift },
-  { label: 'Social Channels', path: '/admin/channels', icon: MessageSquare },
-  { label: 'Help Articles', path: '/admin/help', icon: HelpCircle },
+  { label: 'Bonuses', path: '/admin/bonuses', icon: Gift },
   { label: 'Settings', path: '/admin/settings', icon: Settings },
 ];
 

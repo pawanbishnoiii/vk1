@@ -193,10 +193,13 @@ export type Database = {
           max_amount: number | null
           min_amount: number
           offer_type: string
+          one_time_only: boolean
+          theme: string | null
           title: string
           updated_at: string
           valid_from: string
           valid_until: string | null
+          wagering_multiplier: number
         }
         Insert: {
           bonus_amount?: number
@@ -208,10 +211,13 @@ export type Database = {
           max_amount?: number | null
           min_amount?: number
           offer_type: string
+          one_time_only?: boolean
+          theme?: string | null
           title: string
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
+          wagering_multiplier?: number
         }
         Update: {
           bonus_amount?: number
@@ -223,10 +229,13 @@ export type Database = {
           max_amount?: number | null
           min_amount?: number
           offer_type?: string
+          one_time_only?: boolean
+          theme?: string | null
           title?: string
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
+          wagering_multiplier?: number
         }
         Relationships: []
       }
@@ -356,12 +365,16 @@ export type Database = {
           amount: number
           closed_at: string | null
           created_at: string
+          display_id: number
           duration_seconds: number | null
+          end_time: string | null
           entry_price: number
           exit_price: number | null
           expected_result: string | null
           id: string
           profit_loss: number | null
+          profit_percentage: number | null
+          start_time: string | null
           status: Database["public"]["Enums"]["trade_status"]
           timer_started_at: string | null
           trade_type: Database["public"]["Enums"]["trade_type"]
@@ -373,12 +386,16 @@ export type Database = {
           amount: number
           closed_at?: string | null
           created_at?: string
+          display_id?: number
           duration_seconds?: number | null
+          end_time?: string | null
           entry_price: number
           exit_price?: number | null
           expected_result?: string | null
           id?: string
           profit_loss?: number | null
+          profit_percentage?: number | null
+          start_time?: string | null
           status?: Database["public"]["Enums"]["trade_status"]
           timer_started_at?: string | null
           trade_type: Database["public"]["Enums"]["trade_type"]
@@ -390,12 +407,16 @@ export type Database = {
           amount?: number
           closed_at?: string | null
           created_at?: string
+          display_id?: number
           duration_seconds?: number | null
+          end_time?: string | null
           entry_price?: number
           exit_price?: number | null
           expected_result?: string | null
           id?: string
           profit_loss?: number | null
+          profit_percentage?: number | null
+          start_time?: string | null
           status?: Database["public"]["Enums"]["trade_status"]
           timer_started_at?: string | null
           trade_type?: Database["public"]["Enums"]["trade_type"]
@@ -411,6 +432,7 @@ export type Database = {
           balance_before: number
           created_at: string
           description: string | null
+          display_id: number
           id: string
           reference_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -422,6 +444,7 @@ export type Database = {
           balance_before: number
           created_at?: string
           description?: string | null
+          display_id?: number
           id?: string
           reference_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -433,6 +456,7 @@ export type Database = {
           balance_before?: number
           created_at?: string
           description?: string | null
+          display_id?: number
           id?: string
           reference_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
