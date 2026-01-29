@@ -25,11 +25,13 @@ interface Trade {
   created_at: string;
   closed_at: string | null;
   admin_override: boolean | null;
+  processing_status?: string;
+  settlement_id?: string | null;
 }
 
 export function useActiveTrade() {
   const { user } = useAuth();
-  const { balance, refetch: refetchWallet } = useWallet();
+  const { refetch: refetchWallet } = useWallet();
   const { settings } = useSettings();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -39,8 +41,10 @@ export function useActiveTrade() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingRef = useRef(false);
+  const resultShownRef = useRef<string | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch active trade on mount
+  // Fetch active trade
   const { data: activeTrade, refetch: refetchTrade } = useQuery({
     queryKey: ['active-trade', user?.id],
     queryFn: async () => {
@@ -60,12 +64,27 @@ export function useActiveTrade() {
     },
     enabled: !!user?.id,
     staleTime: 1000,
+    refetchInterval: (query) => {
+      // Refetch more frequently when there's an active trade
+      const data = query.state.data as Trade | null;
+      return data ? 2000 : 10000;
+    },
   });
 
   // Calculate remaining time from server data
   useEffect(() => {
     if (!activeTrade) {
       setCountdown(0);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    // Already processed on server
+    if (activeTrade.status !== 'pending') {
+      handleTradeCompleted(activeTrade);
       return;
     }
 
@@ -73,7 +92,8 @@ export function useActiveTrade() {
       const timerStarted = activeTrade.timer_started_at 
         ? new Date(activeTrade.timer_started_at).getTime() 
         : new Date(activeTrade.created_at).getTime();
-      const endTime = timerStarted + (activeTrade.duration_seconds || 30) * 1000;
+      const duration = (activeTrade.duration_seconds || 30) * 1000;
+      const endTime = timerStarted + duration;
       
       const now = Date.now();
       const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
@@ -85,19 +105,27 @@ export function useActiveTrade() {
     setCountdown(remaining);
 
     if (remaining <= 0) {
-      // Trade expired, process it
       completeTrade();
     }
-  }, [activeTrade]);
+  }, [activeTrade?.id, activeTrade?.status]);
 
   // Countdown timer
   useEffect(() => {
-    if (countdown <= 0 || !activeTrade) return;
+    if (countdown <= 0 || !activeTrade || activeTrade.status !== 'pending') {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
 
-    const timer = setInterval(() => {
+    timerRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          clearInterval(timer);
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
           completeTrade();
           return 0;
         }
@@ -109,25 +137,71 @@ export function useActiveTrade() {
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [countdown, activeTrade]);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [countdown, activeTrade?.id]);
 
-  // Complete trade - call edge function or process locally
+  // Handle trade that was completed server-side
+  const handleTradeCompleted = useCallback((trade: Trade) => {
+    // Prevent showing result multiple times for same trade
+    if (resultShownRef.current === trade.id) return;
+    resultShownRef.current = trade.id;
+    
+    const won = trade.status === 'won';
+    
+    if (won) {
+      soundManager.play(SOUNDS.tradeWin);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    } else if (trade.status === 'lost') {
+      soundManager.play(SOUNDS.tradeLoss);
+    }
+
+    setTradeResult(won ? 'won' : 'lost');
+    
+    toast({
+      title: won ? '🎉 Trade Won!' : '📉 Trade Lost',
+      description: won 
+        ? `You won ${formatINR(Math.abs(Number(trade.profit_loss || 0)))}!`
+        : `You lost ${formatINR(Math.abs(Number(trade.profit_loss || 0)))}`,
+      variant: won ? 'default' : 'destructive',
+    });
+
+    refetchWallet();
+    
+    // Clear result after display
+    setTimeout(() => {
+      setTradeResult(null);
+      resultShownRef.current = null;
+      queryClient.invalidateQueries({ queryKey: ['active-trade'] });
+      queryClient.invalidateQueries({ queryKey: ['trades-history'] });
+    }, 3000);
+  }, [toast, refetchWallet, queryClient]);
+
+  // Complete trade via edge function
   const completeTrade = useCallback(async () => {
     if (!activeTrade || !user || processingRef.current) return;
+    if (activeTrade.status !== 'pending') return;
+    if (activeTrade.processing_status === 'processing' || activeTrade.settlement_id) return;
     
     processingRef.current = true;
     setIsProcessing(true);
 
     try {
-      // Try to call edge function first
       const { data, error } = await supabase.functions.invoke('process-trade', {
         body: { tradeId: activeTrade.id, userId: user.id }
       });
 
       if (error) {
-        console.error('Edge function error, falling back to local processing:', error);
-        await processTradeLocally();
+        console.error('Edge function error:', error);
+        processingRef.current = false;
+        setIsProcessing(false);
+        // Refetch to check if server already processed
+        refetchTrade();
         return;
       }
 
@@ -143,6 +217,7 @@ export function useActiveTrade() {
         }
 
         setTradeResult(won ? 'won' : 'lost');
+        resultShownRef.current = activeTrade.id;
         
         toast({
           title: won ? '🎉 Trade Won!' : '📉 Trade Lost',
@@ -152,146 +227,31 @@ export function useActiveTrade() {
           variant: won ? 'default' : 'destructive',
         });
 
-        // Refetch data
         refetchWallet();
-        queryClient.invalidateQueries({ queryKey: ['active-trade'] });
         queryClient.invalidateQueries({ queryKey: ['trades-history'] });
         queryClient.invalidateQueries({ queryKey: ['recent-trades'] });
 
-        // Reset after showing result
         setTimeout(() => {
           setTradeResult(null);
+          resultShownRef.current = null;
           processingRef.current = false;
           setIsProcessing(false);
+          queryClient.invalidateQueries({ queryKey: ['active-trade'] });
         }, 3000);
+      } else {
+        // Trade might already be processed
+        processingRef.current = false;
+        setIsProcessing(false);
+        refetchTrade();
+        refetchWallet();
       }
     } catch (err) {
       console.error('Trade completion error:', err);
-      await processTradeLocally();
-    }
-  }, [activeTrade, user, balance, toast, refetchWallet, queryClient]);
-
-  // Fallback local processing
-  const processTradeLocally = async () => {
-    if (!activeTrade || !user) return;
-
-    try {
-      // Get the latest trade status
-      const { data: latestTrade, error: fetchError } = await supabase
-        .from('trades')
-        .select('*')
-        .eq('id', activeTrade.id)
-        .single();
-
-      if (fetchError) throw fetchError;
-      
-      // Already processed
-      if (latestTrade.status !== 'pending') {
-        setTradeResult(latestTrade.status === 'won' ? 'won' : 'lost');
-        refetchWallet();
-        setTimeout(() => {
-          setTradeResult(null);
-          processingRef.current = false;
-          setIsProcessing(false);
-        }, 3000);
-        return;
-      }
-
-      // Determine result
-      let won = false;
-      if (latestTrade.expected_result === 'win') {
-        won = true;
-      } else if (latestTrade.expected_result === 'loss') {
-        won = false;
-      } else {
-        const winRate = settings?.global_win_rate || 45;
-        won = Math.random() * 100 < winRate;
-      }
-
-      const amount = Number(activeTrade.amount);
-      const profitPercentage = 80; // Default profit percentage
-      const profitLoss = won ? amount * (profitPercentage / 100) : -amount;
-      const newBalance = won ? balance + profitLoss : balance - amount;
-
-      // Update trade
-      await supabase
-        .from('trades')
-        .update({
-          exit_price: Number(activeTrade.entry_price) * (won ? 1.01 : 0.99),
-          profit_loss: profitLoss,
-          status: won ? 'won' : 'lost',
-          closed_at: new Date().toISOString(),
-        })
-        .eq('id', activeTrade.id);
-
-      // Update wallet
-      await supabase
-        .from('wallets')
-        .update({ 
-          balance: newBalance,
-          locked_balance: 0 
-        })
-        .eq('user_id', user.id);
-
-      // Create transaction
-      await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          type: won ? 'trade_win' : 'trade_loss',
-          amount: profitLoss,
-          balance_before: balance,
-          balance_after: newBalance,
-          reference_id: activeTrade.id,
-          description: `${activeTrade.trade_type.toUpperCase()} ${activeTrade.trading_pair} - ${won ? 'Won' : 'Lost'}`,
-        });
-
-      // Create notification
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: user.id,
-          title: won ? '🎉 Trade Won!' : '📉 Trade Lost',
-          message: won 
-            ? `You won ${formatINR(profitLoss)} on ${activeTrade.trading_pair}!`
-            : `You lost ${formatINR(Math.abs(profitLoss))} on ${activeTrade.trading_pair}`,
-          type: 'trade_result',
-          metadata: { tradeId: activeTrade.id, won, profitLoss },
-        });
-
-      // Play sounds and show result
-      if (won) {
-        soundManager.play(SOUNDS.tradeWin);
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
-      } else {
-        soundManager.play(SOUNDS.tradeLoss);
-      }
-
-      setTradeResult(won ? 'won' : 'lost');
-      refetchWallet();
-      queryClient.invalidateQueries({ queryKey: ['active-trade'] });
-
-      toast({
-        title: won ? '🎉 Trade Won!' : '📉 Trade Lost',
-        description: won 
-          ? `You won ${formatINR(profitLoss)}!`
-          : `You lost ${formatINR(Math.abs(profitLoss))}`,
-        variant: won ? 'default' : 'destructive',
-      });
-
-      setTimeout(() => {
-        setTradeResult(null);
-        processingRef.current = false;
-        setIsProcessing(false);
-      }, 3000);
-
-    } catch (err) {
-      console.error('Local trade processing error:', err);
       processingRef.current = false;
       setIsProcessing(false);
+      refetchTrade();
     }
-  };
+  }, [activeTrade, user, toast, refetchWallet, queryClient, refetchTrade]);
 
   // Place new trade
   const placeTrade = async (
@@ -309,7 +269,7 @@ export function useActiveTrade() {
     try {
       soundManager.play(SOUNDS.tradeStart);
 
-      // Create trade with end_time for server-side tracking
+      // Create trade
       const { data: trade, error } = await supabase
         .from('trades')
         .insert({
@@ -322,7 +282,8 @@ export function useActiveTrade() {
           duration_seconds: tradeDuration,
           timer_started_at: now.toISOString(),
           end_time: endTime.toISOString(),
-          profit_percentage: 80,
+          profit_percentage: settings?.profit_percentage || 80,
+          processing_status: 'pending',
         })
         .select()
         .single();
@@ -335,6 +296,10 @@ export function useActiveTrade() {
         .update({ locked_balance: amount })
         .eq('user_id', user.id);
 
+      // Reset state for new trade
+      resultShownRef.current = null;
+      setTradeResult(null);
+      
       refetchWallet();
       refetchTrade();
       setCountdown(tradeDuration);
