@@ -44,6 +44,35 @@ export type Database = {
         }
         Relationships: []
       }
+      bonus_claims: {
+        Row: {
+          claimed_at: string | null
+          id: string
+          offer_id: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          id?: string
+          offer_id: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          id?: string
+          offer_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonus_claims_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deposit_requests: {
         Row: {
           admin_notes: string | null
@@ -293,34 +322,40 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           email: string
           full_name: string | null
           id: string
           is_blocked: boolean | null
           phone: string | null
+          trading_level: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email: string
           full_name?: string | null
           id?: string
           is_blocked?: boolean | null
           phone?: string | null
+          trading_level?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
           id?: string
           is_blocked?: boolean | null
           phone?: string | null
+          trading_level?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -372,8 +407,10 @@ export type Database = {
           exit_price: number | null
           expected_result: string | null
           id: string
+          processing_status: string | null
           profit_loss: number | null
           profit_percentage: number | null
+          settlement_id: string | null
           start_time: string | null
           status: Database["public"]["Enums"]["trade_status"]
           timer_started_at: string | null
@@ -393,8 +430,10 @@ export type Database = {
           exit_price?: number | null
           expected_result?: string | null
           id?: string
+          processing_status?: string | null
           profit_loss?: number | null
           profit_percentage?: number | null
+          settlement_id?: string | null
           start_time?: string | null
           status?: Database["public"]["Enums"]["trade_status"]
           timer_started_at?: string | null
@@ -414,8 +453,10 @@ export type Database = {
           exit_price?: number | null
           expected_result?: string | null
           id?: string
+          processing_status?: string | null
           profit_loss?: number | null
           profit_percentage?: number | null
+          settlement_id?: string | null
           start_time?: string | null
           status?: Database["public"]["Enums"]["trade_status"]
           timer_started_at?: string | null
@@ -613,6 +654,17 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      settle_trade: {
+        Args: {
+          p_exit_price: number
+          p_profit_loss: number
+          p_settlement_id: string
+          p_trade_id: string
+          p_user_id: string
+          p_won: boolean
+        }
+        Returns: Json
       }
     }
     Enums: {

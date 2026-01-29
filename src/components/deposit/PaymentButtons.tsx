@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, ExternalLink } from 'lucide-react';
+import { Copy } from 'lucide-react';
 
 interface PaymentButtonsProps {
   upiId: string;
@@ -50,46 +50,48 @@ export default function PaymentButtons({ upiId, amount }: PaymentButtonsProps) {
         </Button>
       </div>
 
-      {/* Payment App Buttons */}
+      {/* Payment App Buttons with HD SVG Icons */}
       <div className="grid grid-cols-3 gap-3">
+        {/* Google Pay */}
         <Button
           variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-[#4285F4]/10 hover:border-[#4285F4]/50"
+          className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-[#4285F4]/10 hover:border-[#4285F4]/50 transition-all"
           onClick={() => openPaymentApp('gpay')}
         >
-          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-6 h-6">
-              <path fill="#4285F4" d="M12 24c6.627 0 12-5.373 12-12S18.627 0 12 0 0 5.373 0 12s5.373 12 12 12z"/>
-              <path fill="#fff" d="M12 5.5c1.624 0 2.919.554 3.938 1.447l2.942-2.942C17.068 2.299 14.751 1.5 12 1.5 7.893 1.5 4.348 3.945 2.709 7.43l3.42 2.655C7.044 7.547 9.325 5.5 12 5.5z"/>
-              <path fill="#34A853" d="M22.5 12c0-.918-.082-1.8-.234-2.652H12v5.017h5.895c-.255 1.374-1.031 2.538-2.198 3.319l3.404 2.643c1.984-1.832 3.399-4.533 3.399-8.327z"/>
-              <path fill="#FBBC05" d="M6.129 14.249A6.477 6.477 0 0 1 5.5 12c0-.787.135-1.544.377-2.249L2.458 7.096A10.497 10.497 0 0 0 1.5 12c0 1.688.407 3.281 1.124 4.689l3.505-2.44z"/>
-              <path fill="#EA4335" d="M12 22.5c2.751 0 5.056-.911 6.739-2.47l-3.404-2.643c-.925.62-2.108.988-3.335.988-2.675 0-4.956-2.047-5.871-4.585l-3.42 2.655C4.348 20.055 7.893 22.5 12 22.5z"/>
+          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
+            <svg viewBox="0 0 48 48" className="w-8 h-8">
+              <path fill="#4285F4" d="M23.54 24.5v7.27h-3.5V16.5h9.27c2.23 0 4.13.74 5.67 2.22a7.18 7.18 0 0 1 2.31 5.33c0 2.13-.77 3.96-2.31 5.5-1.5 1.5-3.4 2.25-5.67 2.25h-5.77v-7.3h5.77c1.09 0 2-.36 2.73-1.09a3.58 3.58 0 0 0 1.09-2.64c0-1.05-.36-1.91-1.09-2.59-.73-.68-1.64-1.02-2.73-1.02h-5.77V24.5z"/>
+              <path fill="#34A853" d="M23.54 24.5h5.77v7.27h-5.77z"/>
+              <path fill="#FBBC05" d="M14.27 31.77V16.5h3.5v15.27z"/>
+              <path fill="#EA4335" d="M14.27 16.5h9.27v3.45h-9.27z"/>
             </svg>
           </div>
-          <span className="text-xs font-medium">GPay</span>
+          <span className="text-xs font-medium">Google Pay</span>
         </Button>
 
+        {/* PhonePe */}
         <Button
           variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-[#5F259F]/10 hover:border-[#5F259F]/50"
+          className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-[#5F259F]/10 hover:border-[#5F259F]/50 transition-all"
           onClick={() => openPaymentApp('phonepe')}
         >
-          <div className="w-10 h-10 rounded-full bg-[#5F259F] flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-6 h-6" fill="white">
-              <path d="M7.5 3h9c2.5 0 4.5 2 4.5 4.5v9c0 2.5-2 4.5-4.5 4.5h-9C5 21 3 19 3 16.5v-9C3 5 5 3 7.5 3zm5.25 4.5L9 12l3.75 4.5V14h3v-4h-3V7.5z"/>
+          <div className="w-12 h-12 rounded-full bg-[#5F259F] flex items-center justify-center shadow-sm">
+            <svg viewBox="0 0 24 24" className="w-7 h-7" fill="white">
+              <path d="M5.5 3A2.5 2.5 0 0 0 3 5.5v13A2.5 2.5 0 0 0 5.5 21h13a2.5 2.5 0 0 0 2.5-2.5v-13A2.5 2.5 0 0 0 18.5 3h-13zm7.188 3.5h2.562c1.105 0 2 .895 2 2v1.75l-4.375 5.25h4.375V17h-4.563c-1.104 0-2-.895-2-2v-1.75l4.376-5.25h-2.375V6.5z"/>
             </svg>
           </div>
           <span className="text-xs font-medium">PhonePe</span>
         </Button>
 
+        {/* Paytm */}
         <Button
           variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-[#00BAF2]/10 hover:border-[#00BAF2]/50"
+          className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-[#00BAF2]/10 hover:border-[#00BAF2]/50 transition-all"
           onClick={() => openPaymentApp('paytm')}
         >
-          <div className="w-10 h-10 rounded-full bg-[#00BAF2] flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-6 h-6" fill="white">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2V7h2v10z"/>
+          <div className="w-12 h-12 rounded-full bg-[#00BAF2] flex items-center justify-center shadow-sm">
+            <svg viewBox="0 0 24 24" className="w-7 h-7" fill="white">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2.5 14.5h-2v-9h2v9zm7 0h-2v-5.5c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v5.5h-2v-5.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5v5.5z"/>
             </svg>
           </div>
           <span className="text-xs font-medium">Paytm</span>
