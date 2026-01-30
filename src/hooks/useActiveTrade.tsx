@@ -29,6 +29,9 @@ interface Trade {
   settlement_id?: string | null;
 }
 
+// Session-level tracking to prevent duplicate notifications across re-renders
+const processedTradeIds = new Set<string>();
+
 export function useActiveTrade() {
   const { user } = useAuth();
   const { refetch: refetchWallet } = useWallet();
@@ -44,13 +47,14 @@ export function useActiveTrade() {
   const resultShownRef = useRef<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch active trade
+  // Fetch active trade - poll for updates
   const { data: activeTrade, refetch: refetchTrade } = useQuery({
     queryKey: ['active-trade', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       
-      const { data, error } = await supabase
+      // First check for pending trades
+      const { data: pending, error: pendingError } = await supabase
         .from('trades')
         .select('*')
         .eq('user_id', user.id)
@@ -59,15 +63,32 @@ export function useActiveTrade() {
         .limit(1)
         .maybeSingle();
       
-      if (error) throw error;
-      return data as unknown as Trade | null;
+      if (pendingError) throw pendingError;
+      if (pending) return pending as unknown as Trade;
+      
+      // If no pending, check for recently completed trades (within last 5 seconds) to show result
+      const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
+      const { data: recent } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('status', ['won', 'lost'])
+        .gte('closed_at', fiveSecondsAgo)
+        .order('closed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (recent && !processedTradeIds.has(recent.id)) {
+        return recent as unknown as Trade;
+      }
+      
+      return null;
     },
     enabled: !!user?.id,
-    staleTime: 1000,
+    staleTime: 500,
     refetchInterval: (query) => {
-      // Refetch more frequently when there's an active trade
       const data = query.state.data as Trade | null;
-      return data ? 2000 : 10000;
+      return data?.status === 'pending' ? 1000 : 5000;
     },
   });
 
@@ -149,7 +170,10 @@ export function useActiveTrade() {
   const handleTradeCompleted = useCallback((trade: Trade) => {
     // Prevent showing result multiple times for same trade
     if (resultShownRef.current === trade.id) return;
+    if (processedTradeIds.has(trade.id)) return;
+    
     resultShownRef.current = trade.id;
+    processedTradeIds.add(trade.id);
     
     const won = trade.status === 'won';
     
@@ -218,6 +242,7 @@ export function useActiveTrade() {
 
         setTradeResult(won ? 'won' : 'lost');
         resultShownRef.current = activeTrade.id;
+        processedTradeIds.add(activeTrade.id);
         
         toast({
           title: won ? '🎉 Trade Won!' : '📉 Trade Lost',
@@ -230,6 +255,7 @@ export function useActiveTrade() {
         refetchWallet();
         queryClient.invalidateQueries({ queryKey: ['trades-history'] });
         queryClient.invalidateQueries({ queryKey: ['recent-trades'] });
+        queryClient.invalidateQueries({ queryKey: ['user-bonuses-full'] });
 
         setTimeout(() => {
           setTradeResult(null);

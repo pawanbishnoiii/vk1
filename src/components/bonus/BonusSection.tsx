@@ -1,41 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useOffers } from '@/hooks/useOffers';
-import { useBonuses } from '@/hooks/useBonuses';
+import { useBonusSystem } from '@/hooks/useBonusSystem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BonusCard, ActiveBonusCard } from './BonusCard';
 import { formatINR } from '@/lib/formatters';
+import { BONUS_TYPES, BONUS_ANIMATIONS, BonusType } from '@/lib/bonusConfig';
 import { 
   Gift, 
-  Clock, 
-  CheckCircle, 
-  Loader2, 
-  Sparkles,
   Trophy,
-  Zap
+  Loader2,
+  Lock,
+  RefreshCw,
+  Undo2,
+  PartyPopper,
+  Users,
+  Crown
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Confetti } from '@/components/ui/lottie-animation';
 
 export default function BonusSection() {
-  const { offers, isLoading: offersLoading, calculateBonus } = useOffers();
   const { 
-    userBonuses, 
-    activeBonuses, 
+    offers, 
+    offersLoading, 
+    activeBonuses,
+    totalLockedBonus,
+    pendingAnimations,
     hasClaimedOffer, 
     claimBonus, 
-    isClaiming 
-  } = useBonuses();
+    isClaiming,
+    markAnimationShown,
+  } = useBonusSystem();
   
   const [showClaimAnimation, setShowClaimAnimation] = useState(false);
   const [claimingOfferId, setClaimingOfferId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('all');
+
+  // Show animation for new bonuses
+  useEffect(() => {
+    if (pendingAnimations.length > 0) {
+      setShowClaimAnimation(true);
+      const timer = setTimeout(() => {
+        setShowClaimAnimation(false);
+        pendingAnimations.forEach(b => markAnimationShown(b.id));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingAnimations.length]);
 
   const handleClaimBonus = async (offer: any) => {
     setClaimingOfferId(offer.id);
     
-    // Calculate bonus amount
     const bonusAmount = offer.bonus_amount > 0 
       ? offer.bonus_amount 
       : (offer.min_amount * (offer.bonus_percentage / 100));
@@ -44,6 +59,7 @@ export default function BonusSection() {
       offerId: offer.id,
       bonusAmount,
       wageringMultiplier: offer.wagering_multiplier || 0,
+      bonusType: offer.offer_type,
       expiresAt: offer.valid_until,
     }, {
       onSuccess: () => {
@@ -59,23 +75,26 @@ export default function BonusSection() {
     });
   };
 
-  // Calculate time remaining for expiring offers
-  const getTimeRemaining = (validUntil: string | null) => {
-    if (!validUntil) return null;
-    
-    const now = new Date().getTime();
-    const end = new Date(validUntil).getTime();
-    const diff = end - now;
-    
-    if (diff <= 0) return 'Expired';
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (days > 0) return `${days}d ${hours}h left`;
-    if (hours > 0) return `${hours}h left`;
-    return 'Expiring soon';
+  // Group offers by type
+  const offersByType = {
+    all: offers,
+    first_deposit: offers.filter(o => o.offer_type === 'first_deposit'),
+    reload: offers.filter(o => o.offer_type === 'reload'),
+    lossback: offers.filter(o => o.offer_type === 'lossback'),
+    festival: offers.filter(o => o.offer_type === 'festival'),
+    referral: offers.filter(o => o.offer_type === 'referral'),
+    vip_loyalty: offers.filter(o => o.offer_type === 'vip_loyalty'),
   };
+
+  const tabs = [
+    { id: 'all', label: 'All', icon: Gift, count: offers.length },
+    { id: 'first_deposit', label: 'First Deposit', icon: Gift, count: offersByType.first_deposit.length },
+    { id: 'reload', label: 'Reload', icon: RefreshCw, count: offersByType.reload.length },
+    { id: 'lossback', label: 'Lossback', icon: Undo2, count: offersByType.lossback.length },
+    { id: 'festival', label: 'Festival', icon: PartyPopper, count: offersByType.festival.length },
+    { id: 'referral', label: 'Referral', icon: Users, count: offersByType.referral.length },
+    { id: 'vip_loyalty', label: 'VIP', icon: Crown, count: offersByType.vip_loyalty.length },
+  ].filter(tab => tab.id === 'all' || tab.count > 0);
 
   if (offersLoading) {
     return (
@@ -96,56 +115,25 @@ export default function BonusSection() {
         {activeBonuses.length > 0 && (
           <Card className="border-primary/50 bg-gradient-to-br from-card to-primary/5">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-primary" />
-                Active Bonuses
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-primary" />
+                  Active Bonuses
+                </span>
+                {totalLockedBonus > 0 && (
+                  <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
+                    <Lock className="h-4 w-4" />
+                    Total Locked: <span className="text-primary font-mono">{formatINR(totalLockedBonus)}</span>
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {activeBonuses.map((bonus) => {
-                const progress = bonus.wagering_required > 0 
-                  ? (bonus.wagering_completed / bonus.wagering_required) * 100 
-                  : 100;
-                
-                return (
-                  <motion.div
-                    key={bonus.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-lg bg-secondary/50 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold">{bonus.offer?.title || 'Bonus'}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Amount: <span className="text-primary font-mono">{formatINR(bonus.bonus_amount)}</span>
-                        </p>
-                      </div>
-                      {bonus.expires_at && (
-                        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {getTimeRemaining(bonus.expires_at)}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {bonus.wagering_required > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Wagering Progress</span>
-                          <span className="font-mono">
-                            {formatINR(bonus.wagering_completed)} / {formatINR(bonus.wagering_required)}
-                          </span>
-                        </div>
-                        <Progress value={progress} className="h-2" />
-                        <p className="text-xs text-muted-foreground">
-                          Complete wagering requirements to unlock your bonus
-                        </p>
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
+            <CardContent className="space-y-3">
+              <AnimatePresence>
+                {activeBonuses.map((bonus) => (
+                  <ActiveBonusCard key={bonus.id} bonus={bonus} />
+                ))}
+              </AnimatePresence>
             </CardContent>
           </Card>
         )}
@@ -166,100 +154,52 @@ export default function BonusSection() {
                 <p className="text-sm text-muted-foreground">Check back later for exciting bonuses!</p>
               </div>
             ) : (
-              <div className="grid gap-4">
-                <AnimatePresence>
-                  {offers.map((offer, index) => {
-                    const isClaimed = hasClaimedOffer(offer.id);
-                    const isClaimingThis = claimingOfferId === offer.id;
-                    const timeRemaining = getTimeRemaining(offer.valid_until);
-                    
-                    return (
-                      <motion.div
-                        key={offer.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={cn(
-                          "relative p-4 rounded-xl border-2 transition-all",
-                          isClaimed 
-                            ? "border-profit/30 bg-profit/5" 
-                            : "border-primary/30 bg-gradient-to-br from-card to-primary/5 hover:border-primary/50"
-                        )}
-                      >
-                        {/* Offer badge */}
-                        {offer.offer_type === 'first_deposit' && !isClaimed && (
-                          <div className="absolute -top-2 -right-2">
-                            <Badge className="bg-gradient-to-r from-primary to-primary/80">
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              First Deposit
-                            </Badge>
-                          </div>
-                        )}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="w-full flex-wrap h-auto gap-1 mb-4">
+                  {tabs.map(tab => (
+                    <TabsTrigger 
+                      key={tab.id} 
+                      value={tab.id}
+                      className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
+                      <tab.icon className="h-3.5 w-3.5" />
+                      {tab.label}
+                      {tab.count > 0 && (
+                        <span className="ml-1 text-xs opacity-70">({tab.count})</span>
+                      )}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
 
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{offer.title}</h3>
-                            {offer.description && (
-                              <p className="text-sm text-muted-foreground mt-1">{offer.description}</p>
-                            )}
-                            
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {offer.bonus_percentage > 0 && (
-                                <Badge variant="secondary">
-                                  <Zap className="h-3 w-3 mr-1" />
-                                  {offer.bonus_percentage}% Bonus
-                                </Badge>
-                              )}
-                              {offer.bonus_amount > 0 && (
-                                <Badge variant="secondary">
-                                  +{formatINR(offer.bonus_amount)}
-                                </Badge>
-                              )}
-                              {offer.min_amount > 0 && (
-                                <Badge variant="outline">
-                                  Min: {formatINR(offer.min_amount)}
-                                </Badge>
-                              )}
-                              {timeRemaining && (
-                                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  {timeRemaining}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex-shrink-0">
-                            {isClaimed ? (
-                              <Badge variant="outline" className="bg-profit/10 text-profit border-profit/30">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Claimed
-                              </Badge>
-                            ) : (
-                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button
-                                  onClick={() => handleClaimBonus(offer)}
-                                  disabled={isClaiming}
-                                  className="bg-gradient-to-r from-primary to-primary/80"
-                                >
-                                  {isClaimingThis ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <>
-                                      <Gift className="h-4 w-4 mr-2" />
-                                      Claim
-                                    </>
-                                  )}
-                                </Button>
-                              </motion.div>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
+                <TabsContent value={activeTab} className="mt-0">
+                  <div className="grid gap-4">
+                    <AnimatePresence mode="popLayout">
+                      {(offersByType[activeTab as keyof typeof offersByType] || []).map((offer, index) => {
+                        const isClaimed = hasClaimedOffer(offer.id);
+                        const isClaimingThis = claimingOfferId === offer.id;
+                        
+                        return (
+                          <motion.div
+                            key={offer.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ delay: index * 0.05 }}
+                          >
+                            <BonusCard
+                              offer={offer}
+                              isClaimed={isClaimed}
+                              isClaimingThis={isClaimingThis}
+                              onClaim={() => handleClaimBonus(offer)}
+                              disabled={isClaiming}
+                            />
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                </TabsContent>
+              </Tabs>
             )}
           </CardContent>
         </Card>

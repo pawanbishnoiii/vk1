@@ -87,15 +87,26 @@ const OFFER_THEMES = [
   { value: 'diamond', label: '💎 Diamond VIP', color: 'from-cyan-400 to-blue-600' },
   { value: 'fire', label: '🔥 Hot Deal', color: 'from-orange-500 to-red-600' },
   { value: 'neon', label: '✨ Neon Glow', color: 'from-purple-500 to-pink-500' },
+  { value: 'emerald', label: '💚 Emerald', color: 'from-emerald-500 to-teal-600' },
 ];
 
 const OFFER_TYPES = [
-  { value: 'welcome', label: 'Welcome Bonus' },
-  { value: 'first_deposit', label: 'First Deposit' },
-  { value: 'reload', label: 'Reload Bonus' },
-  { value: 'special', label: 'Special Promotion' },
-  { value: 'daily', label: 'Daily Bonus' },
-  { value: 'vip', label: 'VIP Exclusive' },
+  { value: 'first_deposit', label: '🎁 First Deposit Bonus', description: 'Percentage bonus on first deposit' },
+  { value: 'reload', label: '🔄 Reload Bonus', description: 'Bonus on selected deposits' },
+  { value: 'lossback', label: '💰 Lossback Bonus', description: 'Cashback on net losses' },
+  { value: 'festival', label: '🎉 Festival Bonus', description: 'Time-limited special offer' },
+  { value: 'referral', label: '👥 Referral Bonus', description: 'Earn when friends complete wagering' },
+  { value: 'vip_loyalty', label: '👑 VIP Loyalty Bonus', description: 'Exclusive rewards for loyal traders' },
+];
+
+const OFFER_ANIMATIONS = [
+  { value: 'fade', label: 'Fade In' },
+  { value: 'bounce', label: 'Bounce' },
+  { value: 'slide', label: 'Slide' },
+  { value: 'spin', label: 'Spin' },
+  { value: 'pulse', label: 'Pulse' },
+  { value: 'glow', label: 'Glow' },
+  { value: 'confetti', label: 'Confetti' },
 ];
 
 export default function AdminBonuses() {
@@ -106,7 +117,7 @@ export default function AdminBonuses() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    offer_type: 'welcome',
+    offer_type: 'first_deposit',
     bonus_amount: 0,
     bonus_percentage: 0,
     min_amount: 100,
@@ -114,6 +125,13 @@ export default function AdminBonuses() {
     wagering_multiplier: 1,
     one_time_only: true,
     theme: 'default',
+    animation: 'bounce',
+    icon: 'gift',
+    color_scheme: 'primary',
+    lossback_percentage: 0,
+    referral_reward: 0,
+    vip_level: 0,
+    auto_apply: false,
     is_active: true,
     valid_until: '',
   });
@@ -159,6 +177,13 @@ export default function AdminBonuses() {
         wagering_multiplier: data.wagering_multiplier,
         one_time_only: data.one_time_only,
         theme: data.theme,
+        animation: data.animation,
+        icon: data.icon,
+        color_scheme: data.color_scheme,
+        lossback_percentage: data.lossback_percentage,
+        referral_reward: data.referral_reward,
+        vip_level: data.vip_level,
+        auto_apply: data.auto_apply,
         is_active: data.is_active,
         valid_until: data.valid_until || null,
       };
@@ -230,7 +255,7 @@ export default function AdminBonuses() {
     setFormData({
       title: '',
       description: '',
-      offer_type: 'welcome',
+      offer_type: 'first_deposit',
       bonus_amount: 0,
       bonus_percentage: 0,
       min_amount: 100,
@@ -238,6 +263,13 @@ export default function AdminBonuses() {
       wagering_multiplier: 1,
       one_time_only: true,
       theme: 'default',
+      animation: 'bounce',
+      icon: 'gift',
+      color_scheme: 'primary',
+      lossback_percentage: 0,
+      referral_reward: 0,
+      vip_level: 0,
+      auto_apply: false,
       is_active: true,
       valid_until: '',
     });
@@ -257,6 +289,13 @@ export default function AdminBonuses() {
       wagering_multiplier: offer.wagering_multiplier || 0,
       one_time_only: offer.one_time_only,
       theme: offer.theme || 'default',
+      animation: (offer as any).animation || 'bounce',
+      icon: (offer as any).icon || 'gift',
+      color_scheme: (offer as any).color_scheme || 'primary',
+      lossback_percentage: (offer as any).lossback_percentage || 0,
+      referral_reward: (offer as any).referral_reward || 0,
+      vip_level: (offer as any).vip_level || 0,
+      auto_apply: (offer as any).auto_apply || false,
       is_active: offer.is_active,
       valid_until: offer.valid_until ? offer.valid_until.split('T')[0] : '',
     });
@@ -405,6 +444,22 @@ export default function AdminBonuses() {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label>Animation</Label>
+                    <Select value={formData.animation} onValueChange={(v) => setFormData({ ...formData, animation: v })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OFFER_ANIMATIONS.map(anim => (
+                          <SelectItem key={anim.value} value={anim.value}>{anim.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
                     <Label>Expiry Date</Label>
                     <Input
                       type="date"
@@ -412,6 +467,40 @@ export default function AdminBonuses() {
                       onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
                     />
                   </div>
+                  {formData.offer_type === 'lossback' && (
+                    <div className="space-y-2">
+                      <Label>Lossback Percentage (%)</Label>
+                      <Input
+                        type="number"
+                        value={formData.lossback_percentage}
+                        onChange={(e) => setFormData({ ...formData, lossback_percentage: Number(e.target.value) })}
+                        placeholder="e.g. 10"
+                      />
+                    </div>
+                  )}
+                  {formData.offer_type === 'vip_loyalty' && (
+                    <div className="space-y-2">
+                      <Label>VIP Level Required</Label>
+                      <Input
+                        type="number"
+                        value={formData.vip_level}
+                        onChange={(e) => setFormData({ ...formData, vip_level: Number(e.target.value) })}
+                        min={0}
+                        max={5}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div>
+                    <Label>Auto-Apply</Label>
+                    <p className="text-xs text-muted-foreground">Automatically apply to eligible users</p>
+                  </div>
+                  <Switch
+                    checked={formData.auto_apply}
+                    onCheckedChange={(checked) => setFormData({ ...formData, auto_apply: checked })}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">

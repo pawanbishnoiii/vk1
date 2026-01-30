@@ -9,7 +9,7 @@ const corsHeaders = {
 interface ProcessTradeRequest {
   tradeId: string;
   userId: string;
-  forceResult?: 'win' | 'loss'; // For admin force settlement
+  forceResult?: 'win' | 'loss';
 }
 
 serve(async (req: Request) => {
@@ -29,7 +29,6 @@ serve(async (req: Request) => {
       throw new Error("Missing tradeId or userId");
     }
 
-    // Generate unique settlement ID for idempotency
     const settlementId = crypto.randomUUID();
 
     // Get the trade with lock check
@@ -137,7 +136,6 @@ serve(async (req: Request) => {
 
     if (settlementError) {
       console.error("Settlement error:", settlementError);
-      // Revert processing status on error
       await supabaseAdmin
         .from("trades")
         .update({ processing_status: "pending" })
@@ -145,7 +143,6 @@ serve(async (req: Request) => {
       throw new Error("Settlement failed: " + settlementError.message);
     }
 
-    // Check if settlement was successful
     if (!settlementResult?.success) {
       console.log("Settlement already done:", settlementResult);
       return new Response(
@@ -156,6 +153,16 @@ serve(async (req: Request) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Update wagering progress for active bonuses (non-blocking)
+    try {
+      await supabaseAdmin.rpc('update_wagering_progress', {
+        p_user_id: userId,
+        p_trade_amount: amount
+      });
+    } catch (wagerError) {
+      console.error("Wagering update error:", wagerError);
     }
 
     // Send email notification (non-blocking)
@@ -182,7 +189,7 @@ serve(async (req: Request) => {
               tradeType: trade.trade_type,
               amount: trade.amount,
               profitLoss,
-              appUrl: "https://vk1.lovable.app",
+              appUrl: Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '.lovable.app') || "https://app.lovable.dev",
             },
           }),
         }).catch(e => console.error("Email send error:", e));

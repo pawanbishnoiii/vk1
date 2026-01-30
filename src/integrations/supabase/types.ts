@@ -213,57 +213,78 @@ export type Database = {
       }
       offers: {
         Row: {
+          animation: string | null
+          auto_apply: boolean | null
           bonus_amount: number
           bonus_percentage: number
+          color_scheme: string | null
           created_at: string
           description: string | null
+          icon: string | null
           id: string
           is_active: boolean
+          lossback_percentage: number | null
           max_amount: number | null
           min_amount: number
           offer_type: string
           one_time_only: boolean
+          referral_reward: number | null
           theme: string | null
           title: string
           updated_at: string
           valid_from: string
           valid_until: string | null
+          vip_level: number | null
           wagering_multiplier: number
         }
         Insert: {
+          animation?: string | null
+          auto_apply?: boolean | null
           bonus_amount?: number
           bonus_percentage?: number
+          color_scheme?: string | null
           created_at?: string
           description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
+          lossback_percentage?: number | null
           max_amount?: number | null
           min_amount?: number
           offer_type: string
           one_time_only?: boolean
+          referral_reward?: number | null
           theme?: string | null
           title: string
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
+          vip_level?: number | null
           wagering_multiplier?: number
         }
         Update: {
+          animation?: string | null
+          auto_apply?: boolean | null
           bonus_amount?: number
           bonus_percentage?: number
+          color_scheme?: string | null
           created_at?: string
           description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
+          lossback_percentage?: number | null
           max_amount?: number | null
           min_amount?: number
           offer_type?: string
           one_time_only?: boolean
+          referral_reward?: number | null
           theme?: string | null
           title?: string
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
+          vip_level?: number | null
           wagering_multiplier?: number
         }
         Relationships: []
@@ -360,6 +381,83 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          reward_per_referral: number | null
+          user_id: string
+          uses_count: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          reward_per_referral?: number | null
+          user_id: string
+          uses_count?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          reward_per_referral?: number | null
+          user_id?: string
+          uses_count?: number | null
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          bonus_amount: number | null
+          bonus_credited: boolean | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          referee_id: string
+          referral_code_id: string | null
+          referrer_id: string
+          status: string | null
+        }
+        Insert: {
+          bonus_amount?: number | null
+          bonus_credited?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referee_id: string
+          referral_code_id?: string | null
+          referrer_id: string
+          status?: string | null
+        }
+        Update: {
+          bonus_amount?: number | null
+          bonus_credited?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referee_id?: string
+          referral_code_id?: string | null
+          referrer_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referral_code_id_fkey"
+            columns: ["referral_code_id"]
+            isOneToOne: false
+            referencedRelation: "referral_codes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_channels: {
         Row: {
@@ -507,40 +605,58 @@ export type Database = {
       }
       user_bonuses: {
         Row: {
+          animation_shown: boolean | null
           bonus_amount: number
+          bonus_type: string | null
           claimed_at: string
           completed_at: string | null
           created_at: string
           expires_at: string | null
           id: string
+          locked_amount: number | null
           offer_id: string | null
+          source_deposit_id: string | null
+          source_trade_id: string | null
           status: string
+          unlocked_amount: number | null
           user_id: string
           wagering_completed: number
           wagering_required: number
         }
         Insert: {
+          animation_shown?: boolean | null
           bonus_amount?: number
+          bonus_type?: string | null
           claimed_at?: string
           completed_at?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
+          locked_amount?: number | null
           offer_id?: string | null
+          source_deposit_id?: string | null
+          source_trade_id?: string | null
           status?: string
+          unlocked_amount?: number | null
           user_id: string
           wagering_completed?: number
           wagering_required?: number
         }
         Update: {
+          animation_shown?: boolean | null
           bonus_amount?: number
+          bonus_type?: string | null
           claimed_at?: string
           completed_at?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
+          locked_amount?: number | null
           offer_id?: string | null
+          source_deposit_id?: string | null
+          source_trade_id?: string | null
           status?: string
+          unlocked_amount?: number | null
           user_id?: string
           wagering_completed?: number
           wagering_required?: number
@@ -644,6 +760,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_deposit_with_bonus: {
+        Args: {
+          p_admin_id: string
+          p_bonus_amount?: number
+          p_deposit_id: string
+          p_offer_id?: string
+          p_wagering_multiplier?: number
+        }
+        Returns: Json
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -665,6 +791,14 @@ export type Database = {
           p_won: boolean
         }
         Returns: Json
+      }
+      unlock_bonus: {
+        Args: { p_user_bonus_id: string; p_user_id: string }
+        Returns: Json
+      }
+      update_wagering_progress: {
+        Args: { p_trade_amount: number; p_user_id: string }
+        Returns: undefined
       }
     }
     Enums: {
