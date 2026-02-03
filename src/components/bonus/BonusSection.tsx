@@ -3,19 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useBonusSystem } from '@/hooks/useBonusSystem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BonusCard, ActiveBonusCard } from './BonusCard';
+import { BonusCard, CompletedBonusCard } from './BonusCard';
 import { formatINR } from '@/lib/formatters';
 import { BONUS_TYPES, BONUS_ANIMATIONS, BonusType } from '@/lib/bonusConfig';
 import { 
   Gift, 
   Trophy,
   Loader2,
-  Lock,
+  Wallet,
   RefreshCw,
   Undo2,
   PartyPopper,
   Users,
-  Crown
+  Crown,
+  CheckCircle
 } from 'lucide-react';
 import { Confetti } from '@/components/ui/lottie-animation';
 
@@ -23,8 +24,8 @@ export default function BonusSection() {
   const { 
     offers, 
     offersLoading, 
-    activeBonuses,
-    totalLockedBonus,
+    completedBonuses,
+    totalBonusEarned,
     pendingAnimations,
     hasClaimedOffer, 
     claimBonus, 
@@ -51,6 +52,7 @@ export default function BonusSection() {
   const handleClaimBonus = async (offer: any) => {
     setClaimingOfferId(offer.id);
     
+    // Calculate bonus amount based on offer configuration
     const bonusAmount = offer.bonus_amount > 0 
       ? offer.bonus_amount 
       : (offer.min_amount * (offer.bonus_percentage / 100));
@@ -58,9 +60,7 @@ export default function BonusSection() {
     claimBonus({
       offerId: offer.id,
       bonusAmount,
-      wageringMultiplier: offer.wagering_multiplier || 0,
       bonusType: offer.offer_type,
-      expiresAt: offer.valid_until,
     }, {
       onSuccess: () => {
         setShowClaimAnimation(true);
@@ -111,27 +111,52 @@ export default function BonusSection() {
       <Confetti active={showClaimAnimation} />
       
       <div className="space-y-6">
-        {/* Active Bonuses with Progress */}
-        {activeBonuses.length > 0 && (
+        {/* Bonus Stats Summary */}
+        {totalBonusEarned > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card className="border-profit/50 bg-gradient-to-br from-card to-profit/5">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-full bg-profit/20">
+                      <Wallet className="h-6 w-6 text-profit" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Bonus Earned</p>
+                      <p className="text-2xl font-bold font-mono text-profit">{formatINR(totalBonusEarned)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-profit">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">{completedBonuses.length} bonuses claimed</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Claimed Bonuses History */}
+        {completedBonuses.length > 0 && (
           <Card className="border-primary/50 bg-gradient-to-br from-card to-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Trophy className="h-5 w-5 text-primary" />
-                  Active Bonuses
+                  Your Bonuses
                 </span>
-                {totalLockedBonus > 0 && (
-                  <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
-                    <Lock className="h-4 w-4" />
-                    Total Locked: <span className="text-primary font-mono">{formatINR(totalLockedBonus)}</span>
-                  </span>
-                )}
+                <span className="text-sm font-normal text-muted-foreground">
+                  Credited directly to wallet
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <AnimatePresence>
-                {activeBonuses.map((bonus) => (
-                  <ActiveBonusCard key={bonus.id} bonus={bonus} />
+                {completedBonuses.slice(0, 5).map((bonus) => (
+                  <CompletedBonusCard key={bonus.id} bonus={bonus} />
                 ))}
               </AnimatePresence>
             </CardContent>
