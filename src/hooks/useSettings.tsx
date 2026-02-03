@@ -18,6 +18,14 @@ interface PlatformSettings {
   smtp_port: string;
   smtp_user: string;
   smtp_from_email: string;
+  // Social Links
+  whatsapp_link: string;
+  telegram_link: string;
+  // Sound Settings
+  win_sound_url: string;
+  loss_sound_url: string;
+  background_sound_url: string;
+  sound_loop_enabled: boolean;
 }
 
 export function useSettings() {

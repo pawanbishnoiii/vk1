@@ -607,6 +607,7 @@ export type Database = {
         Row: {
           animation_shown: boolean | null
           bonus_amount: number
+          bonus_credited: boolean | null
           bonus_type: string | null
           claimed_at: string
           completed_at: string | null
@@ -618,6 +619,7 @@ export type Database = {
           source_deposit_id: string | null
           source_trade_id: string | null
           status: string
+          transaction_id: string | null
           unlocked_amount: number | null
           user_id: string
           wagering_completed: number
@@ -626,6 +628,7 @@ export type Database = {
         Insert: {
           animation_shown?: boolean | null
           bonus_amount?: number
+          bonus_credited?: boolean | null
           bonus_type?: string | null
           claimed_at?: string
           completed_at?: string | null
@@ -637,6 +640,7 @@ export type Database = {
           source_deposit_id?: string | null
           source_trade_id?: string | null
           status?: string
+          transaction_id?: string | null
           unlocked_amount?: number | null
           user_id: string
           wagering_completed?: number
@@ -645,6 +649,7 @@ export type Database = {
         Update: {
           animation_shown?: boolean | null
           bonus_amount?: number
+          bonus_credited?: boolean | null
           bonus_type?: string | null
           claimed_at?: string
           completed_at?: string | null
@@ -656,6 +661,7 @@ export type Database = {
           source_deposit_id?: string | null
           source_trade_id?: string | null
           status?: string
+          transaction_id?: string | null
           unlocked_amount?: number | null
           user_id?: string
           wagering_completed?: number
@@ -760,6 +766,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_bonus_direct: {
+        Args: {
+          p_bonus_amount: number
+          p_bonus_type?: string
+          p_offer_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       confirm_deposit_with_bonus: {
         Args: {
           p_admin_id: string

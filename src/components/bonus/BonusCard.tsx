@@ -3,7 +3,6 @@ import { formatINR } from '@/lib/formatters';
 import { BONUS_THEMES, BONUS_ANIMATIONS, BONUS_TYPES, BonusTheme, BonusAnimation, BonusType } from '@/lib/bonusConfig';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { 
   Gift, 
@@ -17,8 +16,8 @@ import {
   Users,
   Crown,
   Zap,
-  Lock,
-  Unlock
+  Wallet,
+  Hash
 } from 'lucide-react';
 
 interface Offer {
@@ -91,6 +90,11 @@ export function BonusCard({ offer, isClaimed, isClaimingThis, onClaim, disabled 
   const timeRemaining = getTimeRemaining(offer.valid_until);
   const bonusTypeConfig = BONUS_TYPES[offer.offer_type as BonusType];
 
+  // Calculate display bonus
+  const displayBonus = offer.bonus_amount > 0 
+    ? formatINR(offer.bonus_amount)
+    : `${offer.bonus_percentage}%`;
+
   return (
     <motion.div
       {...animationConfig}
@@ -155,28 +159,18 @@ export function BonusCard({ offer, isClaimed, isClaimingThis, onClaim, disabled 
           )}
           
           <div className="flex flex-wrap gap-2">
-            {offer.bonus_percentage > 0 && (
-              <Badge variant="secondary" className={cn("border", themeConfig.borderClass)}>
-                <Zap className="h-3 w-3 mr-1" />
-                {offer.bonus_percentage}% Bonus
-              </Badge>
-            )}
-            {offer.bonus_amount > 0 && (
-              <Badge variant="secondary" className={cn("border", themeConfig.borderClass)}>
-                +{formatINR(offer.bonus_amount)}
-              </Badge>
-            )}
+            {/* Bonus amount badge - prominent display */}
+            <Badge className={cn("bg-gradient-to-r text-white font-bold", themeConfig.gradient)}>
+              <Wallet className="h-3 w-3 mr-1" />
+              Get {displayBonus}
+            </Badge>
+            
             {offer.min_amount > 0 && (
               <Badge variant="outline">
                 Min: {formatINR(offer.min_amount)}
               </Badge>
             )}
-            {offer.wagering_multiplier > 0 && (
-              <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
-                <Lock className="h-3 w-3 mr-1" />
-                {offer.wagering_multiplier}x Wagering
-              </Badge>
-            )}
+            
             {timeRemaining && (
               <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
                 <Clock className="h-3 w-3 mr-1" />
@@ -184,6 +178,12 @@ export function BonusCard({ offer, isClaimed, isClaimingThis, onClaim, disabled 
               </Badge>
             )}
           </div>
+          
+          {/* Direct wallet credit notice */}
+          <p className="text-xs text-profit mt-2 flex items-center gap-1">
+            <Zap className="h-3 w-3" />
+            Credits directly to your wallet!
+          </p>
         </div>
         
         <div className="flex-shrink-0">
@@ -204,7 +204,7 @@ export function BonusCard({ offer, isClaimed, isClaimingThis, onClaim, disabled 
                 ) : (
                   <>
                     <Gift className="h-4 w-4 mr-2" />
-                    Claim
+                    Claim Now
                   </>
                 )}
               </Button>
@@ -216,6 +216,63 @@ export function BonusCard({ offer, isClaimed, isClaimingThis, onClaim, disabled 
   );
 }
 
+interface CompletedBonusCardProps {
+  bonus: {
+    id: string;
+    bonus_amount: number;
+    bonus_type: string;
+    transaction_id: string | null;
+    claimed_at: string;
+    offer?: {
+      title: string;
+      theme: string | null;
+      offer_type: string;
+    };
+  };
+}
+
+export function CompletedBonusCard({ bonus }: CompletedBonusCardProps) {
+  const theme = (bonus.offer?.theme as BonusTheme) || 'default';
+  const themeConfig = BONUS_THEMES[theme] || BONUS_THEMES.default;
+  const claimedDate = new Date(bonus.claimed_at).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={cn(
+        "p-4 rounded-xl space-y-2 border bg-profit/5 border-profit/30"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-profit/20">
+            <CheckCircle className="h-5 w-5 text-profit" />
+          </div>
+          <div>
+            <p className="font-semibold">{bonus.offer?.title || bonus.bonus_type}</p>
+            <p className="text-xs text-muted-foreground">Claimed on {claimedDate}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="font-bold font-mono text-profit">+{formatINR(bonus.bonus_amount)}</p>
+          {bonus.transaction_id && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Hash className="h-3 w-3" />
+              {bonus.transaction_id.slice(0, 8)}
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Keep ActiveBonusCard for backwards compatibility
 interface ActiveBonusCardProps {
   bonus: {
     id: string;
@@ -233,70 +290,5 @@ interface ActiveBonusCardProps {
 }
 
 export function ActiveBonusCard({ bonus }: ActiveBonusCardProps) {
-  const theme = (bonus.offer?.theme as BonusTheme) || 'default';
-  const themeConfig = BONUS_THEMES[theme] || BONUS_THEMES.default;
-  const progress = bonus.wagering_required > 0 
-    ? (bonus.wagering_completed / bonus.wagering_required) * 100 
-    : 100;
-  const timeRemaining = getTimeRemaining(bonus.expires_at);
-  const isComplete = progress >= 100;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        "p-4 rounded-xl space-y-3 border",
-        themeConfig.bgClass,
-        themeConfig.borderClass
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {isComplete ? (
-            <Unlock className={cn("h-5 w-5", themeConfig.textClass)} />
-          ) : (
-            <Lock className={cn("h-5 w-5", themeConfig.textClass)} />
-          )}
-          <div>
-            <p className="font-semibold">{bonus.offer?.title || 'Bonus'}</p>
-            <p className="text-sm text-muted-foreground">
-              Locked: <span className={cn("font-mono", themeConfig.textClass)}>{formatINR(bonus.locked_amount)}</span>
-            </p>
-          </div>
-        </div>
-        {timeRemaining && (
-          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
-            <Clock className="h-3 w-3 mr-1" />
-            {timeRemaining}
-          </Badge>
-        )}
-      </div>
-      
-      {bonus.wagering_required > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Wagering Progress</span>
-            <span className="font-mono">
-              {formatINR(bonus.wagering_completed)} / {formatINR(bonus.wagering_required)}
-            </span>
-          </div>
-          <Progress 
-            value={progress} 
-            className={cn("h-2", isComplete && "bg-profit/20")} 
-          />
-          {isComplete ? (
-            <p className="text-xs text-profit flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Wagering complete! Bonus will be unlocked.
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Trade {formatINR(bonus.wagering_required - bonus.wagering_completed)} more to unlock
-            </p>
-          )}
-        </div>
-      )}
-    </motion.div>
-  );
+  return <CompletedBonusCard bonus={bonus as any} />;
 }
