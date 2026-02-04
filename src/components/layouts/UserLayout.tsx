@@ -25,7 +25,7 @@ const navItems = [
   { label: 'Trade', path: '/trade', icon: LineChart },
   { label: 'Wallet', path: '/wallet', icon: Wallet },
   { label: 'History', path: '/history', icon: History },
-  { label: 'Help', path: '/help', icon: HelpCircle },
+  { label: 'Profile', path: '/profile', icon: User },
 ];
 
 interface UserLayoutProps {

@@ -73,6 +73,111 @@ export type Database = {
           },
         ]
       }
+      bonus_task_progress: {
+        Row: {
+          bonus_amount: number | null
+          claimed_at: string | null
+          completed_at: string | null
+          current_progress: number
+          id: string
+          is_claimed: boolean | null
+          is_completed: boolean | null
+          offer_id: string | null
+          started_at: string
+          target_progress: number
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          bonus_amount?: number | null
+          claimed_at?: string | null
+          completed_at?: string | null
+          current_progress?: number
+          id?: string
+          is_claimed?: boolean | null
+          is_completed?: boolean | null
+          offer_id?: string | null
+          started_at?: string
+          target_progress: number
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          bonus_amount?: number | null
+          claimed_at?: string | null
+          completed_at?: string | null
+          current_progress?: number
+          id?: string
+          is_claimed?: boolean | null
+          is_completed?: boolean | null
+          offer_id?: string | null
+          started_at?: string
+          target_progress?: number
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonus_task_progress_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_task_progress_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_claims: {
+        Row: {
+          amount: number
+          claimed_at: string
+          day_number: number
+          id: string
+          offer_id: string | null
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          claimed_at?: string
+          day_number?: number
+          id?: string
+          offer_id?: string | null
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          claimed_at?: string
+          day_number?: number
+          id?: string
+          offer_id?: string | null
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_claims_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_claims_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deposit_requests: {
         Row: {
           admin_notes: string | null
@@ -215,20 +320,32 @@ export type Database = {
         Row: {
           animation: string | null
           auto_apply: boolean | null
+          background_image: string | null
           bonus_amount: number
+          bonus_mode: string | null
           bonus_percentage: number
           color_scheme: string | null
           created_at: string
+          daily_claim_days: number | null
+          daily_max_amount: number | null
+          daily_min_amount: number | null
+          deposit_target: number | null
           description: string | null
+          extra_credit_fixed: number | null
+          extra_credit_percent: number | null
           icon: string | null
           id: string
+          image_url: string | null
           is_active: boolean
+          is_instant_credit: boolean | null
           lossback_percentage: number | null
           max_amount: number | null
           min_amount: number
           offer_type: string
           one_time_only: boolean
           referral_reward: number | null
+          task_target_count: number | null
+          task_type: string | null
           theme: string | null
           title: string
           updated_at: string
@@ -240,20 +357,32 @@ export type Database = {
         Insert: {
           animation?: string | null
           auto_apply?: boolean | null
+          background_image?: string | null
           bonus_amount?: number
+          bonus_mode?: string | null
           bonus_percentage?: number
           color_scheme?: string | null
           created_at?: string
+          daily_claim_days?: number | null
+          daily_max_amount?: number | null
+          daily_min_amount?: number | null
+          deposit_target?: number | null
           description?: string | null
+          extra_credit_fixed?: number | null
+          extra_credit_percent?: number | null
           icon?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_instant_credit?: boolean | null
           lossback_percentage?: number | null
           max_amount?: number | null
           min_amount?: number
           offer_type: string
           one_time_only?: boolean
           referral_reward?: number | null
+          task_target_count?: number | null
+          task_type?: string | null
           theme?: string | null
           title: string
           updated_at?: string
@@ -265,20 +394,32 @@ export type Database = {
         Update: {
           animation?: string | null
           auto_apply?: boolean | null
+          background_image?: string | null
           bonus_amount?: number
+          bonus_mode?: string | null
           bonus_percentage?: number
           color_scheme?: string | null
           created_at?: string
+          daily_claim_days?: number | null
+          daily_max_amount?: number | null
+          daily_min_amount?: number | null
+          deposit_target?: number | null
           description?: string | null
+          extra_credit_fixed?: number | null
+          extra_credit_percent?: number | null
           icon?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_instant_credit?: boolean | null
           lossback_percentage?: number | null
           max_amount?: number | null
           min_amount?: number
           offer_type?: string
           one_time_only?: boolean
           referral_reward?: number | null
+          task_target_count?: number | null
+          task_type?: string | null
           theme?: string | null
           title?: string
           updated_at?: string
@@ -603,6 +744,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_activity_logs: {
+        Row: {
+          activity_data: Json | null
+          activity_type: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_data?: Json | null
+          activity_type: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_data?: Json | null
+          activity_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_bonuses: {
         Row: {
           animation_shown: boolean | null
@@ -775,6 +946,14 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_daily_bonus: {
+        Args: { p_offer_id: string; p_user_id: string }
+        Returns: Json
+      }
+      claim_task_bonus: {
+        Args: { p_offer_id: string; p_user_id: string }
+        Returns: Json
+      }
       confirm_deposit_with_bonus: {
         Args: {
           p_admin_id: string
@@ -810,6 +989,10 @@ export type Database = {
       unlock_bonus: {
         Args: { p_user_bonus_id: string; p_user_id: string }
         Returns: Json
+      }
+      update_task_bonus_progress: {
+        Args: { p_task_type?: string; p_user_id: string }
+        Returns: undefined
       }
       update_wagering_progress: {
         Args: { p_trade_amount: number; p_user_id: string }

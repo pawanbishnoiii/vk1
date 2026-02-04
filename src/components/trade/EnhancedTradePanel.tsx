@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatINR } from '@/lib/formatters';
 import { SOUNDS, soundManager } from '@/lib/sounds';
 import { Confetti } from '@/components/ui/lottie-animation';
+import TradeResultModal from './TradeResultModal';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -57,7 +58,9 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
+  const [showResultModal, setShowResultModal] = useState(false);
   const actionInProgressRef = useRef(false);
+  const lastResultRef = useRef<string | null>(null);
 
   const amountNum = parseFloat(amount) || 0;
   const minAmount = tradeSettings?.min_trade_amount || 10;
@@ -69,6 +72,18 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
   const isValidAmount = amountNum >= minAmount && 
                         amountNum <= maxAmount && 
                         amountNum <= availableBalance;
+
+  // Show result modal when trade completes
+  useEffect(() => {
+    if (tradeResult && activeTrade?.id && lastResultRef.current !== activeTrade.id) {
+      lastResultRef.current = activeTrade.id;
+      setShowResultModal(true);
+    }
+  }, [tradeResult, activeTrade?.id]);
+
+  const handleCloseResultModal = useCallback(() => {
+    setShowResultModal(false);
+  }, []);
 
   // Play custom sounds from settings
   useEffect(() => {
@@ -130,10 +145,14 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
     }
   };
 
-  // Calculate progress percentage for circular timer
-  const progressPercent = activeTrade 
+  // Calculate progress - fixed to show proper countdown
+  const progressPercent = activeTrade && countdown > 0
     ? ((tradeDuration - countdown) / tradeDuration) * 100
-    : 0;
+    : activeTrade && countdown === 0 ? 100 : 0;
+
+  // Calculate stroke dashoffset for SVG circle
+  const circumference = 2 * Math.PI * 72; // r=72
+  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
   const potentialProfit = amountNum * (profitPercentage / 100);
   const potentialLoss = amountNum * (lossPercentage / 100);
@@ -141,6 +160,16 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
   return (
     <>
       <Confetti active={showConfetti} />
+      
+      {/* Trade Result Modal - Shows for 10 seconds with skip option */}
+      <TradeResultModal
+        isOpen={showResultModal}
+        result={tradeResult}
+        amount={Number(activeTrade?.amount || 0)}
+        profitLoss={Number(activeTrade?.amount || 0) * (tradeResult === 'won' ? profitPercentage / 100 : lossPercentage / 100)}
+        onClose={handleCloseResultModal}
+        displayTime={10}
+      />
       
       <Card className="border-border/50 overflow-hidden relative">
         {/* Trading disabled overlay */}
