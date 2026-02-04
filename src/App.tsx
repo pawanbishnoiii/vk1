@@ -13,6 +13,7 @@ import Trade from "./pages/Trade";
 import Wallet from "./pages/Wallet";
 import History from "./pages/History";
 import Help from "./pages/Help";
+import Profile from "./pages/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -22,6 +23,8 @@ import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 import AdminTrades from "./pages/admin/AdminTrades";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminBonuses from "./pages/admin/AdminBonuses";
+import AdminBonusManagement from "./pages/admin/AdminBonusManagement";
+import AdminUserTracking from "./pages/admin/AdminUserTracking";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +52,9 @@ const App = () => (
             <Route path="/history" element={
               <ProtectedRoute><History /></ProtectedRoute>
             } />
+            <Route path="/profile" element={
+              <ProtectedRoute><Profile /></ProtectedRoute>
+            } />
             
             {/* Admin Routes */}
             <Route path="/admin" element={
@@ -70,7 +76,10 @@ const App = () => (
               <AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>
             } />
             <Route path="/admin/bonuses" element={
-              <AdminProtectedRoute><AdminBonuses /></AdminProtectedRoute>
+              <AdminProtectedRoute><AdminBonusManagement /></AdminProtectedRoute>
+            } />
+            <Route path="/admin/user-tracking" element={
+              <AdminProtectedRoute><AdminUserTracking /></AdminProtectedRoute>
             } />
             
             <Route path="*" element={<NotFound />} />
