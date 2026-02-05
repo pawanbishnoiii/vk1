@@ -47,7 +47,8 @@ import {
   Users,
   Activity,
   CheckCircle,
-  XCircle
+  XCircle,
+  Sparkles
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -65,6 +66,7 @@ const BONUS_TYPES = [
   { value: 'daily_claim', label: '📅 Daily Claim Bonus', icon: Calendar },
   { value: 'task_bonus', label: '🎯 Task-Based Bonus', icon: Target },
   { value: 'deposit_discount', label: '💰 Deposit Discount', icon: Percent },
+  { value: 'daily_spin', label: '🎰 Daily Spin Wheel', icon: Sparkles },
 ];
 
 export default function AdminBonusManagement() {
@@ -98,6 +100,19 @@ export default function AdminBonusManagement() {
     extra_credit_fixed: 0,
     extra_credit_percent: 10,
     image_url: '',
+    // Spin wheel specific
+    spin_enabled: true,
+    spin_cooldown_hours: 24,
+    spin_prizes: JSON.stringify([
+      { amount: 0, probability: 25, label: 'Try Again', color: '#6b7280' },
+      { amount: 10, probability: 20, label: '₹10', color: '#22c55e' },
+      { amount: 25, probability: 18, label: '₹25', color: '#3b82f6' },
+      { amount: 50, probability: 15, label: '₹50', color: '#8b5cf6' },
+      { amount: 100, probability: 10, label: '₹100', color: '#f59e0b' },
+      { amount: 250, probability: 7, label: '₹250', color: '#ef4444' },
+      { amount: 500, probability: 4, label: '₹500', color: '#ec4899' },
+      { amount: 1000, probability: 1, label: '₹1000', color: '#f97316' },
+    ]),
   });
 
   // Fetch offers
@@ -151,6 +166,11 @@ export default function AdminBonusManagement() {
         extra_credit_fixed: data.extra_credit_fixed,
         extra_credit_percent: data.extra_credit_percent,
         image_url: data.image_url || null,
+        spin_enabled: data.spin_enabled,
+        spin_cooldown_hours: data.spin_cooldown_hours,
+        spin_prizes: typeof data.spin_prizes === 'string' 
+          ? JSON.parse(data.spin_prizes) 
+          : data.spin_prizes,
       };
 
       if (editingOffer) {
@@ -222,6 +242,18 @@ export default function AdminBonusManagement() {
       extra_credit_fixed: 0,
       extra_credit_percent: 10,
       image_url: '',
+        spin_enabled: true,
+        spin_cooldown_hours: 24,
+        spin_prizes: JSON.stringify([
+          { amount: 0, probability: 25, label: 'Try Again', color: '#6b7280' },
+          { amount: 10, probability: 20, label: '₹10', color: '#22c55e' },
+          { amount: 25, probability: 18, label: '₹25', color: '#3b82f6' },
+          { amount: 50, probability: 15, label: '₹50', color: '#8b5cf6' },
+          { amount: 100, probability: 10, label: '₹100', color: '#f59e0b' },
+          { amount: 250, probability: 7, label: '₹250', color: '#ef4444' },
+          { amount: 500, probability: 4, label: '₹500', color: '#ec4899' },
+          { amount: 1000, probability: 1, label: '₹1000', color: '#f97316' },
+        ]),
     });
     setEditingOffer(null);
   };
@@ -231,6 +263,9 @@ export default function AdminBonusManagement() {
     setFormData({
       ...formData,
       ...offer,
+      spin_prizes: typeof offer.spin_prizes === 'object' 
+        ? JSON.stringify(offer.spin_prizes, null, 2)
+        : offer.spin_prizes || '[]',
     });
     setIsDialogOpen(true);
   };
@@ -393,6 +428,47 @@ export default function AdminBonusManagement() {
                   onChange={(e) => setFormData({ ...formData, extra_credit_percent: Number(e.target.value) })}
                 />
               </div>
+            </div>
+          </>
+        );
+      case 'daily_spin':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Cooldown Hours</Label>
+                <Input
+                  type="number"
+                  value={formData.spin_cooldown_hours}
+                  onChange={(e) => setFormData({ ...formData, spin_cooldown_hours: Number(e.target.value) })}
+                  min={1}
+                  max={168}
+                />
+                <p className="text-xs text-muted-foreground">Hours between spins (24 = daily)</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Enabled</Label>
+                <div className="flex items-center gap-2 pt-2">
+                  <Switch
+                    checked={formData.spin_enabled}
+                    onCheckedChange={(v) => setFormData({ ...formData, spin_enabled: v })}
+                  />
+                  <span className="text-sm">{formData.spin_enabled ? 'Active' : 'Inactive'}</span>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Prize Configuration (JSON)</Label>
+              <Textarea
+                value={formData.spin_prizes}
+                onChange={(e) => setFormData({ ...formData, spin_prizes: e.target.value })}
+                rows={10}
+                className="font-mono text-xs"
+                placeholder='[{"amount": 10, "probability": 20, "label": "₹10", "color": "#22c55e"}]'
+              />
+              <p className="text-xs text-muted-foreground">
+                Each prize: amount, probability (total should = 100), label, color (hex)
+              </p>
             </div>
           </>
         );
@@ -612,6 +688,11 @@ export default function AdminBonusManagement() {
                           {offer.offer_type === 'deposit_discount' && (
                             <span className="text-sm">
                               {offer.extra_credit_percent > 0 ? `${offer.extra_credit_percent}%` : formatINR(offer.extra_credit_fixed)}
+                            </span>
+                          )}
+                          {offer.offer_type === 'daily_spin' && (
+                            <span className="text-sm">
+                              {offer.spin_cooldown_hours}h cooldown • {Array.isArray(offer.spin_prizes) ? offer.spin_prizes.length : 0} prizes
                             </span>
                           )}
                         </TableCell>

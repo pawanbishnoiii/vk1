@@ -178,6 +178,54 @@ export type Database = {
           },
         ]
       }
+      daily_spins: {
+        Row: {
+          id: string
+          offer_id: string | null
+          prize_amount: number
+          prize_index: number
+          prize_label: string | null
+          spun_at: string | null
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          offer_id?: string | null
+          prize_amount?: number
+          prize_index?: number
+          prize_label?: string | null
+          spun_at?: string | null
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          offer_id?: string | null
+          prize_amount?: number
+          prize_index?: number
+          prize_label?: string | null
+          spun_at?: string | null
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_spins_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_spins_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deposit_requests: {
         Row: {
           admin_notes: string | null
@@ -344,6 +392,9 @@ export type Database = {
           offer_type: string
           one_time_only: boolean
           referral_reward: number | null
+          spin_cooldown_hours: number | null
+          spin_enabled: boolean | null
+          spin_prizes: Json | null
           task_target_count: number | null
           task_type: string | null
           theme: string | null
@@ -381,6 +432,9 @@ export type Database = {
           offer_type: string
           one_time_only?: boolean
           referral_reward?: number | null
+          spin_cooldown_hours?: number | null
+          spin_enabled?: boolean | null
+          spin_prizes?: Json | null
           task_target_count?: number | null
           task_type?: string | null
           theme?: string | null
@@ -418,6 +472,9 @@ export type Database = {
           offer_type?: string
           one_time_only?: boolean
           referral_reward?: number | null
+          spin_cooldown_hours?: number | null
+          spin_enabled?: boolean | null
+          spin_prizes?: Json | null
           task_target_count?: number | null
           task_type?: string | null
           theme?: string | null
@@ -948,6 +1005,16 @@ export type Database = {
       }
       claim_daily_bonus: {
         Args: { p_offer_id: string; p_user_id: string }
+        Returns: Json
+      }
+      claim_spin_prize: {
+        Args: {
+          p_offer_id: string
+          p_prize_amount: number
+          p_prize_index: number
+          p_prize_label?: string
+          p_user_id: string
+        }
         Returns: Json
       }
       claim_task_bonus: {

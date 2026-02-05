@@ -4,11 +4,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Gift, Calendar, Target, Percent } from 'lucide-react';
+import { Loader2, Gift, Calendar, Target, Percent, Sparkles } from 'lucide-react';
 import FirstDepositBonus from './FirstDepositBonus';
 import DailyClaimBonus from './DailyClaimBonus';
 import TaskBonus from './TaskBonus';
 import DepositDiscountBonus from './DepositDiscountBonus';
+import DailySpinWheel from './DailySpinWheel';
 
 export default function EnhancedBonusSection() {
   const { user } = useAuth();
@@ -33,6 +34,7 @@ export default function EnhancedBonusSection() {
   const dailyClaimOffers = offers?.filter(o => o.offer_type === 'daily_claim') || [];
   const taskBonusOffers = offers?.filter(o => o.offer_type === 'task_bonus') || [];
   const depositDiscountOffers = offers?.filter(o => o.offer_type === 'deposit_discount') || [];
+  const spinOffers = offers?.filter(o => o.offer_type === 'daily_spin' && o.spin_enabled) || [];
 
   if (isLoading) {
     return (
@@ -45,7 +47,7 @@ export default function EnhancedBonusSection() {
   }
 
   const hasOffers = (firstDepositOffers.length + dailyClaimOffers.length + 
-                    taskBonusOffers.length + depositDiscountOffers.length) > 0;
+                    taskBonusOffers.length + depositDiscountOffers.length + spinOffers.length) > 0;
 
   if (!hasOffers) {
     return (
@@ -111,6 +113,15 @@ export default function EnhancedBonusSection() {
                   Extra Credit
                 </TabsTrigger>
               )}
+              {spinOffers.length > 0 && (
+                <TabsTrigger 
+                  value="spin" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Daily Spin
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <div className="p-4">
@@ -142,6 +153,14 @@ export default function EnhancedBonusSection() {
                 <TabsContent value="deposit-discount" className="mt-0 space-y-4">
                   {depositDiscountOffers.map(offer => (
                     <DepositDiscountBonus key={offer.id} offer={offer as any} />
+                  ))}
+                </TabsContent>
+              )}
+
+              {spinOffers.length > 0 && (
+                <TabsContent value="spin" className="mt-0 space-y-4">
+                  {spinOffers.map(offer => (
+                    <DailySpinWheel key={offer.id} offer={offer as any} />
                   ))}
                 </TabsContent>
               )}

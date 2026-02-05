@@ -47,6 +47,8 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
     tradeResult, 
     showConfetti, 
     isProcessing,
+    settledTradeData,
+    clearSettledTradeData,
     placeTrade,
     tradeDuration 
   } = useActiveTrade();
@@ -60,7 +62,7 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   const [showResultModal, setShowResultModal] = useState(false);
   const actionInProgressRef = useRef(false);
-  const lastResultRef = useRef<string | null>(null);
+  const lastResultRef = useRef<string | null>(null);  
 
   const amountNum = parseFloat(amount) || 0;
   const minAmount = tradeSettings?.min_trade_amount || 10;
@@ -75,14 +77,19 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
 
   // Show result modal when trade completes
   useEffect(() => {
-    if (tradeResult && activeTrade?.id && lastResultRef.current !== activeTrade.id) {
-      lastResultRef.current = activeTrade.id;
+    if (tradeResult && settledTradeData && lastResultRef.current !== settledTradeData.id) {
+      lastResultRef.current = settledTradeData.id;
       setShowResultModal(true);
     }
-  }, [tradeResult, activeTrade?.id]);
+  }, [tradeResult, settledTradeData]);
 
   const handleCloseResultModal = useCallback(() => {
     setShowResultModal(false);
+    // Clear settled data after modal closes
+    setTimeout(() => {
+      clearSettledTradeData();
+      lastResultRef.current = null;
+    }, 100);
   }, []);
 
   // Play custom sounds from settings
@@ -165,8 +172,8 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
       <TradeResultModal
         isOpen={showResultModal}
         result={tradeResult}
-        amount={Number(activeTrade?.amount || 0)}
-        profitLoss={Number(activeTrade?.amount || 0) * (tradeResult === 'won' ? profitPercentage / 100 : lossPercentage / 100)}
+        amount={settledTradeData?.amount || 0}
+        profitLoss={Math.abs(settledTradeData?.profit_loss || 0)}
         onClose={handleCloseResultModal}
         displayTime={10}
       />

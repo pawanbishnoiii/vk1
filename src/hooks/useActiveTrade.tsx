@@ -8,6 +8,16 @@ import { useToast } from './use-toast';
 import { formatINR } from '@/lib/formatters';
 import { SOUNDS, soundManager } from '@/lib/sounds';
 
+export interface SettledTradeData {
+  id: string;
+  display_id: number | null;
+  amount: number;
+  profit_loss: number;
+  status: 'won' | 'lost';
+  trade_type: 'buy' | 'sell';
+  trading_pair: string;
+}
+
 interface Trade {
   id: string;
   display_id: number | null;
@@ -43,6 +53,7 @@ export function useActiveTrade() {
   const [tradeResult, setTradeResult] = useState<'won' | 'lost' | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [settledTradeData, setSettledTradeData] = useState<SettledTradeData | null>(null);
   const processingRef = useRef(false);
   const resultShownRef = useRef<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -175,6 +186,17 @@ export function useActiveTrade() {
     resultShownRef.current = trade.id;
     processedTradeIds.add(trade.id);
     
+    // Store settled trade data BEFORE setting result
+    setSettledTradeData({
+      id: trade.id,
+      display_id: trade.display_id,
+      amount: Number(trade.amount),
+      profit_loss: Number(trade.profit_loss || 0),
+      status: trade.status as 'won' | 'lost',
+      trade_type: trade.trade_type,
+      trading_pair: trade.trading_pair,
+    });
+    
     const won = trade.status === 'won';
     
     if (won) {
@@ -197,12 +219,13 @@ export function useActiveTrade() {
 
     refetchWallet();
     
-    // Clear result after display
+    // Clear result after display - but keep settledTradeData for modal
     setTimeout(() => {
       setTradeResult(null);
       resultShownRef.current = null;
       queryClient.invalidateQueries({ queryKey: ['active-trade'] });
       queryClient.invalidateQueries({ queryKey: ['trades-history'] });
+      // Don't clear settledTradeData here - modal will clear it
     }, 3000);
   }, [toast, refetchWallet, queryClient]);
 
@@ -243,6 +266,17 @@ export function useActiveTrade() {
         setTradeResult(won ? 'won' : 'lost');
         resultShownRef.current = activeTrade.id;
         processedTradeIds.add(activeTrade.id);
+        
+        // Store settled trade data for modal
+        setSettledTradeData({
+          id: activeTrade.id,
+          display_id: activeTrade.display_id,
+          amount: Number(activeTrade.amount),
+          profit_loss: Number(data.profitLoss),
+          status: won ? 'won' : 'lost',
+          trade_type: activeTrade.trade_type,
+          trading_pair: activeTrade.trading_pair,
+        });
         
         toast({
           title: won ? '🎉 Trade Won!' : '📉 Trade Lost',
@@ -343,6 +377,8 @@ export function useActiveTrade() {
     tradeResult,
     showConfetti,
     isProcessing,
+    settledTradeData,
+    clearSettledTradeData: () => setSettledTradeData(null),
     placeTrade,
     refetchTrade,
     tradeDuration: settings?.trade_duration || 30,

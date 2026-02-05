@@ -1,7 +1,8 @@
 import { useNavigate, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { usePrices } from '@/hooks/usePrices';
+import { useLenis } from '@/hooks/useLenis';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +30,14 @@ export default function Index() {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { prices } = usePrices();
+  
+  // Enable smooth scrolling with Lenis
+  useLenis();
+  
+  // Parallax effect for hero
+  const { scrollY } = useScroll();
+  const heroY = useTransform(scrollY, [0, 500], [0, 150]);
+  const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   // Redirect logged-in users to dashboard
   if (user && !isLoading) {
@@ -100,30 +109,42 @@ export default function Index() {
   ];
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Hero Section */}
       <header className="relative overflow-hidden">
         {/* Animated Background */}
         <div className="absolute inset-0 gradient-hero" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
         
-        {/* Floating Elements */}
-        <motion.div 
-          className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl"
-          animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{ duration: 8, repeat: Infinity }}
-        />
-        <motion.div 
-          className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
-          animate={{ 
-            scale: [1.2, 1, 1.2],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{ duration: 10, repeat: Infinity }}
-        />
+        {/* Floating Animated Blobs */}
+        <motion.div style={{ y: heroY }}>
+          <motion.div 
+            className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl"
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.5, 0.3],
+              x: [0, 30, 0],
+            }}
+            transition={{ duration: 8, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl"
+            animate={{ 
+              scale: [1.2, 1, 1.2],
+              opacity: [0.3, 0.5, 0.3],
+              x: [0, -20, 0],
+            }}
+            transition={{ duration: 10, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-primary/5 to-accent/5 rounded-full blur-3xl"
+            animate={{ 
+              scale: [1, 1.1, 1],
+              rotate: [0, 180, 360],
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          />
+        </motion.div>
         
         <nav className="relative z-10 container flex items-center justify-between h-20">
           <motion.div 
@@ -157,7 +178,10 @@ export default function Index() {
           </motion.div>
         </nav>
 
-        <div className="relative z-10 container py-20 md:py-32">
+        <motion.div 
+          className="relative z-10 container py-20 md:py-32"
+          style={{ opacity: heroOpacity }}
+        >
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -239,7 +263,7 @@ export default function Index() {
               </div>
             </motion.div>
           </div>
-        </div>
+        </motion.div>
       </header>
 
       {/* Live Prices Ticker */}
