@@ -277,7 +277,7 @@ export default function Index() {
             />
             <span className="text-sm font-medium text-muted-foreground">Live Prices</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {TRADING_PAIRS.map((pair, index) => {
               const priceData = prices[pair.symbol];
               const change = priceData?.change24h || 0;

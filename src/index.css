@@ -262,4 +262,33 @@
   .transition-smooth {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* Shake animation for loss */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  /* Neon glow pulse */
+  @keyframes neonPulse {
+    0%, 100% { box-shadow: 0 0 5px hsla(var(--primary), 0.4), 0 0 20px hsla(var(--primary), 0.2); }
+    50% { box-shadow: 0 0 10px hsla(var(--primary), 0.6), 0 0 40px hsla(var(--primary), 0.3); }
+  }
+
+  .neon-glow {
+    animation: neonPulse 2s ease-in-out infinite;
+  }
+
+  /* VIP badge gradient */
+  .vip-badge {
+    background: linear-gradient(135deg, hsl(45 93% 47%), hsl(35 100% 50%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 }
