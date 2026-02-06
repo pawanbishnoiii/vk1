@@ -342,7 +342,7 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
                     
                     <p className="text-4xl font-bold font-mono">{formatINR(Number(activeTrade.amount))}</p>
                     
-                    {tradeResult && (
+                    {tradeResult && settledTradeData && (
                       <motion.div
                         initial={{ opacity: 0, y: 20, scale: 0.8 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -350,13 +350,13 @@ export default function EnhancedTradePanel({ selectedPair, currentPrice }: Enhan
                         className={cn(
                           "text-3xl font-bold mt-4 py-3 px-6 rounded-xl inline-block",
                           tradeResult === 'won' 
-                            ? "text-profit bg-profit/20 border border-profit/30" 
-                            : "text-loss bg-loss/20 border border-loss/30"
+                            ? "text-profit bg-profit/20 border border-profit/30 shadow-glow-profit" 
+                            : "text-loss bg-loss/20 border border-loss/30 shadow-glow-loss animate-[shake_0.5s_ease-in-out]"
                         )}
                       >
                         {tradeResult === 'won' 
-                          ? `+${formatINR(Number(activeTrade.amount) * (profitPercentage / 100))}` 
-                          : `-${formatINR(Number(activeTrade.amount) * (lossPercentage / 100))}`
+                          ? `+${formatINR(Math.abs(settledTradeData.profit_loss))}` 
+                          : `-${formatINR(Math.abs(settledTradeData.profit_loss))}`
                         }
                       </motion.div>
                     )}

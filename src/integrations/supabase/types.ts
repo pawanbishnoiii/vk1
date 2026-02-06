@@ -540,43 +540,61 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number | null
           avatar_url: string | null
           bio: string | null
           created_at: string
           email: string
           full_name: string | null
+          gender: string | null
           id: string
           is_blocked: boolean | null
+          mobile_number: string | null
           phone: string | null
+          total_deposit: number | null
+          total_trades: number | null
           trading_level: string | null
           updated_at: string
           user_id: string
+          vip_level: number | null
         }
         Insert: {
+          age?: number | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email: string
           full_name?: string | null
+          gender?: string | null
           id?: string
           is_blocked?: boolean | null
+          mobile_number?: string | null
           phone?: string | null
+          total_deposit?: number | null
+          total_trades?: number | null
           trading_level?: string | null
           updated_at?: string
           user_id: string
+          vip_level?: number | null
         }
         Update: {
+          age?: number | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
+          gender?: string | null
           id?: string
           is_blocked?: boolean | null
+          mobile_number?: string | null
           phone?: string | null
+          total_deposit?: number | null
+          total_trades?: number | null
           trading_level?: string | null
           updated_at?: string
           user_id?: string
+          vip_level?: number | null
         }
         Relationships: []
       }

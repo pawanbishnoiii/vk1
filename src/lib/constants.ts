@@ -4,7 +4,8 @@ export const TRADING_PAIRS = [
   { symbol: 'ETH/USDT', base: 'ETH', quote: 'USDT', icon: 'Ξ', decimals: 2 },
   { symbol: 'BNB/USDT', base: 'BNB', quote: 'USDT', icon: '◉', decimals: 2 },
   { symbol: 'EOS/USDT', base: 'EOS', quote: 'USDT', icon: '◈', decimals: 4 },
-  { symbol: 'TRX/USDT', base: 'TRX', quote: 'USDT', icon: '◇', decimals: 4 },
+  { symbol: 'TRX/USDT', base: 'TRX', quote: 'USDT', icon: '◇', decimals: 5 },
+  { symbol: 'SOL/USDT', base: 'SOL', quote: 'USDT', icon: '◎', decimals: 2 },
 ] as const;
 
 export type TradingPair = typeof TRADING_PAIRS[number];

@@ -121,11 +121,12 @@ export default function AdminSettings() {
         </div>
 
         <Tabs defaultValue="trading" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="trading">Trading</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
-            <TabsTrigger value="social">Social & Support</TabsTrigger>
+            <TabsTrigger value="social">Social</TabsTrigger>
             <TabsTrigger value="sounds">Sounds</TabsTrigger>
+            <TabsTrigger value="auth">Auth</TabsTrigger>
           </TabsList>
 
           {/* Trading Settings Tab */}
