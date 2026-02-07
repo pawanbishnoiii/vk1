@@ -134,10 +134,22 @@ export default function AdminBonusManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_bonuses')
-        .select('*, profiles!user_bonuses_user_id_fkey(email, full_name)')
+        .select('*')
         .order('claimed_at', { ascending: false })
         .limit(100);
       if (error) throw error;
+      
+      // Fetch profile emails separately
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(b => b.user_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, email, full_name')
+          .in('user_id', userIds);
+        
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        return data.map(b => ({ ...b, profile: profileMap.get(b.user_id) || null }));
+      }
       return data;
     },
   });
@@ -542,7 +554,7 @@ export default function AdminBonusManagement() {
         {/* Bonus Type Tabs */}
         <Tabs value={selectedType} onValueChange={setSelectedType}>
           <div className="flex items-center justify-between mb-4">
-            <TabsList className="grid grid-cols-4 w-auto">
+            <TabsList className="grid grid-cols-5 w-auto">
               {BONUS_TYPES.map(type => (
                 <TabsTrigger key={type.value} value={type.value} className="gap-2">
                   <type.icon className="h-4 w-4" />
@@ -753,7 +765,7 @@ export default function AdminBonusManagement() {
                 {userBonuses?.slice(0, 10).map((bonus) => (
                   <TableRow key={bonus.id}>
                     <TableCell>
-                      {(bonus as any).profiles?.email || bonus.user_id.slice(0, 8)}
+                      {(bonus as any).profile?.email || bonus.user_id.slice(0, 8)}
                     </TableCell>
                     <TableCell className="font-mono text-profit">
                       {formatINR(bonus.bonus_amount)}
