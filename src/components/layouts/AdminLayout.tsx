@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
   { label: 'Users', path: '/admin/users', icon: Users },
+  { label: 'User Tracking', path: '/admin/user-tracking', icon: LineChart },
   { label: 'Deposits', path: '/admin/deposits', icon: ArrowDownCircle },
   { label: 'Withdrawals', path: '/admin/withdrawals', icon: ArrowUpCircle },
   { label: 'Trades', path: '/admin/trades', icon: LineChart },

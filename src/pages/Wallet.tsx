@@ -16,7 +16,7 @@ import { formatINR } from '@/lib/formatters';
 import { formatDate } from '@/lib/constants';
 import EnhancedDeposit from '@/components/deposit/EnhancedDeposit';
 import FloatingSocialButtons from '@/components/social/FloatingSocialButtons';
-import BonusSection from '@/components/bonus/BonusSection';
+import EnhancedBonusSection from '@/components/bonus/EnhancedBonusSection';
 import { 
   Wallet as WalletIcon, 
   Plus, 
@@ -390,7 +390,7 @@ export default function Wallet() {
             </TabsContent>
 
             <TabsContent value="bonus" className="mt-4">
-              <BonusSection />
+              <EnhancedBonusSection />
             </TabsContent>
           </Tabs>
         </motion.div>

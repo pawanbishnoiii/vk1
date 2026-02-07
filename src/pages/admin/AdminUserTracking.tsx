@@ -64,9 +64,10 @@ export default function AdminUserTracking() {
   const { data: activities, isLoading: activitiesLoading } = useQuery({
     queryKey: ['admin-activity-logs', activityFilter],
     queryFn: async () => {
+      // Fetch activity logs
       let query = supabase
         .from('user_activity_logs')
-        .select('*, profiles!user_activity_logs_user_id_fkey(email, full_name)')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
       
@@ -76,6 +77,18 @@ export default function AdminUserTracking() {
       
       const { data, error } = await query;
       if (error) throw error;
+      
+      // Fetch profiles separately to avoid FK join issues
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(a => a.user_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, email, full_name')
+          .in('user_id', userIds);
+        
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        return data.map(a => ({ ...a, profile: profileMap.get(a.user_id) || null }));
+      }
       return data;
     },
   });
@@ -306,7 +319,7 @@ export default function AdminUserTracking() {
                     <div className="flex-1">
                       <p className="text-sm">
                         <span className="font-medium">
-                          {(activity as any).profiles?.email || 'Unknown'}
+                          {(activity as any).profile?.email || 'Unknown'}
                         </span>
                         {' '}
                         <span className="text-muted-foreground">{activity.activity_type}</span>
