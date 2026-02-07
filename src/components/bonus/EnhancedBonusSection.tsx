@@ -173,13 +173,6 @@ export default function EnhancedBonusSection() {
                 </TabsContent>
               )}
 
-              {spinOffers.length > 0 && (
-                <TabsContent value="spin" className="mt-0 space-y-4">
-                  {spinOffers.map(offer => (
-                    <DailySpinWheel key={offer.id} offer={offer as any} />
-                  ))}
-                </TabsContent>
-              )}
             </div>
           </Tabs>
         </CardContent>

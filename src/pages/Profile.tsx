@@ -24,6 +24,13 @@ import { useSocialChannels } from '@/hooks/useSocialChannels';
 import { formatINR } from '@/lib/formatters';
 import { motion } from 'framer-motion';
 import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
   User, 
   Edit2, 
   Save, 
@@ -46,9 +53,15 @@ interface Profile {
   email: string;
   full_name: string | null;
   phone: string | null;
+  mobile_number: string | null;
+  gender: string | null;
+  age: number | null;
   avatar_url: string | null;
   bio: string | null;
   trading_level: string | null;
+  vip_level: number | null;
+  total_deposit: number | null;
+  total_trades: number | null;
 }
 
 export default function Profile() {
@@ -64,6 +77,9 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
+    mobile_number: '',
+    gender: '',
+    age: '' as string | number,
     bio: '',
   });
 
@@ -122,6 +138,9 @@ export default function Profile() {
       setFormData({
         full_name: profile.full_name || '',
         phone: profile.phone || '',
+        mobile_number: profile.mobile_number || '',
+        gender: profile.gender || '',
+        age: profile.age || '',
         bio: profile.bio || '',
       });
     }
@@ -132,7 +151,14 @@ export default function Profile() {
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase
         .from('profiles')
-        .update(data)
+        .update({
+          full_name: data.full_name,
+          phone: data.phone,
+          mobile_number: data.mobile_number,
+          gender: data.gender || null,
+          age: data.age ? Number(data.age) : null,
+          bio: data.bio,
+        })
         .eq('user_id', user?.id);
       if (error) throw error;
     },
@@ -240,11 +266,43 @@ export default function Profile() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label>Mobile Number</Label>
+                        <Input
+                          value={formData.mobile_number}
+                          onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
+                          placeholder="+91 9876543210"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="space-y-2">
                         <Label>Phone</Label>
                         <Input
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                           placeholder="+91 1234567890"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Gender</Label>
+                        <Select value={formData.gender} onValueChange={(v) => setFormData({ ...formData, gender: v })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Age</Label>
+                        <Input
+                          type="number"
+                          value={formData.age}
+                          onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                          placeholder="25"
+                          min={18}
+                          max={100}
                         />
                       </div>
                     </div>
