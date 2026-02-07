@@ -11,6 +11,7 @@ import { TrendingUp, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -115,8 +116,28 @@ export default function Auth() {
         variant: 'destructive',
       });
     } else {
-      // Update profile with extra fields
-      toast({ title: 'Account created!', description: 'Welcome to the platform!' });
+      // Update profile with extra fields (mobile, gender, age)
+      // Wait briefly for the trigger to create the profile row
+      setTimeout(async () => {
+        try {
+          const { data: { user: newUser } } = await supabase.auth.getUser();
+          if (newUser) {
+            await supabase
+              .from('profiles')
+              .update({
+                mobile_number: formData.mobileNumber,
+                gender: formData.gender,
+                age: parseInt(formData.age) || null,
+                full_name: formData.fullName,
+              })
+              .eq('user_id', newUser.id);
+          }
+        } catch (err) {
+          console.error('Profile update error:', err);
+        }
+      }, 1000);
+      
+      toast({ title: 'Account created!', description: 'Please check your email to verify your account.' });
       navigate('/dashboard');
     }
     setIsLoading(false);

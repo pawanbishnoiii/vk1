@@ -61,6 +61,14 @@ export default function EnhancedBonusSection() {
     );
   }
 
+  // Determine default tab based on available offers
+  const defaultTab = firstDepositOffers.length > 0 ? 'first-deposit' 
+    : spinOffers.length > 0 ? 'spin'
+    : dailyClaimOffers.length > 0 ? 'daily'
+    : taskBonusOffers.length > 0 ? 'tasks'
+    : depositDiscountOffers.length > 0 ? 'deposit-discount'
+    : 'first-deposit';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -75,8 +83,17 @@ export default function EnhancedBonusSection() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Tabs defaultValue="first-deposit" className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="w-full justify-start rounded-none border-b bg-transparent h-auto p-0 overflow-x-auto">
+              {spinOffers.length > 0 && (
+                <TabsTrigger 
+                  value="spin" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Daily Spin
+                </TabsTrigger>
+              )}
               {firstDepositOffers.length > 0 && (
                 <TabsTrigger 
                   value="first-deposit" 
@@ -113,18 +130,17 @@ export default function EnhancedBonusSection() {
                   Extra Credit
                 </TabsTrigger>
               )}
-              {spinOffers.length > 0 && (
-                <TabsTrigger 
-                  value="spin" 
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Daily Spin
-                </TabsTrigger>
-              )}
             </TabsList>
 
             <div className="p-4">
+              {spinOffers.length > 0 && (
+                <TabsContent value="spin" className="mt-0 space-y-4">
+                  {spinOffers.map(offer => (
+                    <DailySpinWheel key={offer.id} offer={offer as any} />
+                  ))}
+                </TabsContent>
+              )}
+
               {firstDepositOffers.length > 0 && (
                 <TabsContent value="first-deposit" className="mt-0 space-y-4">
                   {firstDepositOffers.map(offer => (
