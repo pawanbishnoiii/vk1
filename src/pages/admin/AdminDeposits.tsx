@@ -315,8 +315,7 @@ export default function AdminDeposits() {
                   <TableRow>
                     <TableHead>User</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Network</TableHead>
-                    <TableHead>TX Hash</TableHead>
+                    <TableHead>UTR / Proof</TableHead>
                     <TableHead>Bonus Eligible</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
@@ -335,9 +334,19 @@ export default function AdminDeposits() {
                       <TableCell className="font-mono font-semibold text-profit">
                         {formatINR(Number(deposit.amount))}
                       </TableCell>
-                      <TableCell>{deposit.crypto_network}</TableCell>
-                      <TableCell className="font-mono text-xs max-w-[120px] truncate">
-                        {deposit.transaction_hash || '-'}
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-mono text-xs max-w-[120px] truncate">{deposit.transaction_hash || '-'}</p>
+                          {deposit.screenshot_url && (
+                            <Button variant="outline" size="sm" className="h-6 text-xs gap-1"
+                              onClick={() => {
+                                const url = supabase.storage.from('deposit-screenshots').getPublicUrl(deposit.screenshot_url).data.publicUrl;
+                                window.open(url, '_blank');
+                              }}>
+                              <Eye className="h-3 w-3" /> Screenshot
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {!deposit.hasBonusClaim ? (
@@ -420,6 +429,28 @@ export default function AdminDeposits() {
                     </p>
                   </div>
                 </div>
+
+                {/* UTR Reference */}
+                {selectedDeposit.transaction_hash && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">UTR / Transaction Ref</p>
+                    <p className="font-mono text-sm">{selectedDeposit.transaction_hash}</p>
+                  </div>
+                )}
+
+                {/* Payment Screenshot */}
+                {selectedDeposit.screenshot_url && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Payment Screenshot</p>
+                    <div className="rounded-lg overflow-hidden border border-border max-h-64">
+                      <img
+                        src={supabase.storage.from('deposit-screenshots').getPublicUrl(selectedDeposit.screenshot_url).data.publicUrl}
+                        alt="Payment proof"
+                        className="w-full object-contain max-h-64 bg-background"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Bonus Options */}
                 {!selectedDeposit.hasBonusClaim && firstDepositOffers && firstDepositOffers.length > 0 && (
