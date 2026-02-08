@@ -235,6 +235,7 @@ export type Database = {
           id: string
           reviewed_at: string | null
           reviewed_by: string | null
+          screenshot_url: string | null
           status: Database["public"]["Enums"]["request_status"]
           transaction_hash: string | null
           user_id: string
@@ -247,6 +248,7 @@ export type Database = {
           id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          screenshot_url?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           transaction_hash?: string | null
           user_id: string
@@ -259,6 +261,7 @@ export type Database = {
           id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          screenshot_url?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           transaction_hash?: string | null
           user_id?: string

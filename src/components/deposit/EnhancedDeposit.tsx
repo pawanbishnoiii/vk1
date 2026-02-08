@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
@@ -22,7 +22,10 @@ import {
   Smartphone,
   ChevronRight,
   CheckCircle,
-  Wallet
+  Wallet,
+  Upload,
+  Image as ImageIcon,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +41,10 @@ export default function EnhancedDeposit() {
   const [txHash, setTxHash] = useState('');
   const [step, setStep] = useState<'amount' | 'payment' | 'confirm'>('amount');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const firstDepositOffer = getFirstDepositOffer();
   const amountNum = parseFloat(amount) || 0;
@@ -55,8 +62,43 @@ export default function EnhancedDeposit() {
     { name: 'Paytm', color: '#00BAF2', icon: '💰' },
   ];
 
+  const handleScreenshotSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Max 5MB allowed', variant: 'destructive' });
+      return;
+    }
+    setScreenshotFile(file);
+    setScreenshotPreview(URL.createObjectURL(file));
+  };
+
+  const uploadScreenshot = async (): Promise<string | null> => {
+    if (!screenshotFile || !user?.id) return null;
+    setIsUploading(true);
+    try {
+      const ext = screenshotFile.name.split('.').pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from('deposit-screenshots')
+        .upload(path, screenshotFile);
+      if (error) throw error;
+      return path;
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const createDeposit = useMutation({
     mutationFn: async () => {
+      let screenshotUrl: string | null = null;
+      if (screenshotFile) {
+        screenshotUrl = await uploadScreenshot();
+      }
+
       const { error } = await supabase
         .from('deposit_requests')
         .insert({
@@ -64,6 +106,7 @@ export default function EnhancedDeposit() {
           amount: amountNum,
           transaction_hash: txHash || undefined,
           crypto_network: 'UPI',
+          screenshot_url: screenshotUrl,
         });
       
       if (error) throw error;
@@ -76,16 +119,14 @@ export default function EnhancedDeposit() {
         setStep('amount');
         setAmount('');
         setTxHash('');
+        setScreenshotFile(null);
+        setScreenshotPreview(null);
       }, 3000);
       queryClient.invalidateQueries({ queryKey: ['deposits'] });
       refetchWallet();
     },
     onError: (err: any) => {
-      toast({
-        title: 'Failed to submit deposit',
-        description: err.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Failed to submit deposit', description: err.message, variant: 'destructive' });
     },
   });
 
@@ -126,7 +167,10 @@ export default function EnhancedDeposit() {
                   {firstDepositOffer.title}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {firstDepositOffer.bonus_percentage}% bonus up to {formatINR(firstDepositOffer.max_amount || 10000)}
+                  {firstDepositOffer.bonus_percentage > 0 
+                    ? `${firstDepositOffer.bonus_percentage}% bonus up to ${formatINR(firstDepositOffer.max_amount || 10000)}`
+                    : `${formatINR(firstDepositOffer.bonus_amount)} bonus`
+                  }
                 </p>
               </div>
             </div>
@@ -139,66 +183,34 @@ export default function EnhancedDeposit() {
               <Wallet className="h-5 w-5 text-primary" />
               Deposit Funds
             </CardTitle>
-            <CardDescription>
-              Add money to your trading wallet via UPI
-            </CardDescription>
+            <CardDescription>Add money to your trading wallet via UPI</CardDescription>
           </CardHeader>
           
           <CardContent>
             <AnimatePresence mode="wait">
               {step === 'amount' && (
-                <motion.div
-                  key="amount"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="space-y-4"
-                >
-                  {/* Amount Input */}
+                <motion.div key="amount" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Enter Amount (INR)</Label>
-                    <Input
-                      type="number"
-                      placeholder={`Min ${formatINR(minDeposit)}`}
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="font-mono text-xl h-14 text-center"
-                    />
+                    <Input type="number" placeholder={`Min ${formatINR(minDeposit)}`} value={amount} onChange={(e) => setAmount(e.target.value)} className="font-mono text-xl h-14 text-center" />
                   </div>
 
-                  {/* Quick Amount Buttons */}
                   <div className="grid grid-cols-5 gap-2">
                     {quickAmounts.map((amt) => (
-                      <Button
-                        key={amt}
-                        variant={amountNum === amt ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                          setAmount(String(amt));
-                          soundManager.play(SOUNDS.click);
-                        }}
-                      >
+                      <Button key={amt} variant={amountNum === amt ? "default" : "outline"} size="sm" onClick={() => { setAmount(String(amt)); soundManager.play(SOUNDS.click); }}>
                         ₹{amt >= 1000 ? `${amt/1000}K` : amt}
                       </Button>
                     ))}
                   </div>
 
-                  {/* Bonus Preview */}
                   {bonusAmount > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-4 rounded-lg bg-profit/10 border border-profit/30"
-                    >
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="p-4 rounded-lg bg-profit/10 border border-profit/30">
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Deposit Amount:</span>
                         <span className="font-mono">{formatINR(amountNum)}</span>
                       </div>
                       <div className="flex items-center justify-between text-profit">
-                        <span className="text-sm flex items-center gap-1">
-                          <Gift className="h-4 w-4" />
-                          Bonus:
-                        </span>
+                        <span className="text-sm flex items-center gap-1"><Gift className="h-4 w-4" />Bonus:</span>
                         <span className="font-mono font-bold">+{formatINR(bonusAmount)}</span>
                       </div>
                       <div className="border-t border-border/50 mt-2 pt-2">
@@ -210,32 +222,19 @@ export default function EnhancedDeposit() {
                     </motion.div>
                   )}
 
-                  <Button
-                    className="w-full h-12"
-                    disabled={amountNum < minDeposit || amountNum > maxDeposit}
-                    onClick={() => setStep('payment')}
-                  >
-                    Continue to Payment
-                    <ChevronRight className="ml-2 h-4 w-4" />
+                  <Button className="w-full h-12" disabled={amountNum < minDeposit || amountNum > maxDeposit} onClick={() => setStep('payment')}>
+                    Continue to Payment <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 </motion.div>
               )}
 
               {step === 'payment' && (
-                <motion.div
-                  key="payment"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-4"
-                >
-                  {/* Amount Summary */}
+                <motion.div key="payment" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                   <div className="text-center p-4 rounded-lg bg-secondary/50">
                     <p className="text-sm text-muted-foreground">Amount to Pay</p>
                     <p className="text-3xl font-bold font-mono text-primary">{formatINR(amountNum)}</p>
                   </div>
 
-                  {/* UPI ID */}
                   <div className="space-y-2">
                     <Label>Pay to UPI ID</Label>
                     <div className="flex items-center gap-2">
@@ -246,25 +245,13 @@ export default function EnhancedDeposit() {
                     </div>
                   </div>
 
-                  {/* Payment App Buttons */}
                   <div className="space-y-2">
                     <Label>Pay via App</Label>
                     <div className="grid grid-cols-3 gap-3">
                       {paymentApps.map((app) => (
-                        <motion.button
-                          key={app.name}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => openPaymentApp(app.name)}
-                          className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border hover:border-primary transition-all"
-                          style={{ background: `${app.color}15` }}
-                        >
-                          <div 
-                            className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
-                            style={{ background: app.color }}
-                          >
-                            {app.icon}
-                          </div>
+                        <motion.button key={app.name} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => openPaymentApp(app.name)}
+                          className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border hover:border-primary transition-all" style={{ background: `${app.color}15` }}>
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style={{ background: app.color }}>{app.icon}</div>
                           <span className="font-medium text-sm">{app.name}</span>
                         </motion.button>
                       ))}
@@ -272,75 +259,62 @@ export default function EnhancedDeposit() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setStep('amount')} className="flex-1">
-                      Back
-                    </Button>
-                    <Button onClick={() => setStep('confirm')} className="flex-1">
-                      I've Paid
-                    </Button>
+                    <Button variant="outline" onClick={() => setStep('amount')} className="flex-1">Back</Button>
+                    <Button onClick={() => setStep('confirm')} className="flex-1">I've Paid</Button>
                   </div>
                 </motion.div>
               )}
 
               {step === 'confirm' && (
-                <motion.div
-                  key="confirm"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-4"
-                >
+                <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                   <div className="text-center p-4 rounded-lg bg-primary/10">
                     <Smartphone className="h-12 w-12 mx-auto mb-2 text-primary" />
                     <p className="text-lg font-semibold">Confirm Your Payment</p>
-                    <p className="text-sm text-muted-foreground">Enter the transaction reference (optional)</p>
+                    <p className="text-sm text-muted-foreground">Enter UTR and upload payment screenshot</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Transaction Reference / UTR (Optional)</Label>
-                    <Input
-                      placeholder="Enter UTR or Transaction ID"
-                      value={txHash}
-                      onChange={(e) => setTxHash(e.target.value)}
-                    />
+                    <Label>Transaction Reference / UTR</Label>
+                    <Input placeholder="Enter UTR or Transaction ID" value={txHash} onChange={(e) => setTxHash(e.target.value)} />
                   </div>
 
-                  <Button
-                    className="w-full h-12"
-                    onClick={() => createDeposit.mutate()}
-                    disabled={createDeposit.isPending}
-                  >
-                    {createDeposit.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
+                  {/* Screenshot Upload */}
+                  <div className="space-y-2">
+                    <Label>Payment Screenshot</Label>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleScreenshotSelect} />
+                    
+                    {screenshotPreview ? (
+                      <div className="relative rounded-lg overflow-hidden border border-border">
+                        <img src={screenshotPreview} alt="Payment proof" className="w-full max-h-48 object-contain bg-background" />
+                        <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7"
+                          onClick={() => { setScreenshotFile(null); setScreenshotPreview(null); }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     ) : (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Submit Deposit Request
-                      </>
+                      <Button variant="outline" className="w-full h-20 border-dashed flex flex-col gap-1" onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="h-6 w-6 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Upload Screenshot (Max 5MB)</span>
+                      </Button>
+                    )}
+                  </div>
+
+                  <Button className="w-full h-12" onClick={() => createDeposit.mutate()} disabled={createDeposit.isPending || isUploading}>
+                    {(createDeposit.isPending || isUploading) ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
+                    ) : (
+                      <><CheckCircle className="mr-2 h-4 w-4" />Submit Deposit Request</>
                     )}
                   </Button>
 
-                  <Button variant="outline" onClick={() => setStep('payment')} className="w-full">
-                    Back
-                  </Button>
+                  <Button variant="outline" onClick={() => setStep('payment')} className="w-full">Back</Button>
                 </motion.div>
               )}
 
               {showSuccess && (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center py-8"
-                >
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 1 }}
-                    className="w-20 h-20 rounded-full bg-profit/20 flex items-center justify-center mx-auto mb-4"
-                  >
+                <motion.div key="success" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
+                  <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}
+                    className="w-20 h-20 rounded-full bg-profit/20 flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="h-10 w-10 text-profit" />
                   </motion.div>
                   <h3 className="text-xl font-bold">Deposit Submitted!</h3>

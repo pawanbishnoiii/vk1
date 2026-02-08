@@ -296,40 +296,53 @@ export default function AdminBonusManagement() {
       case 'first_deposit':
         return (
           <>
+            <div className="space-y-2">
+              <Label>Bonus Mode</Label>
+              <Select 
+                value={formData.bonus_percentage > 0 ? 'percentage' : 'fixed'}
+                onValueChange={(v) => {
+                  if (v === 'fixed') setFormData({ ...formData, bonus_percentage: 0, bonus_amount: formData.bonus_amount || 100 });
+                  else setFormData({ ...formData, bonus_amount: 0, bonus_percentage: formData.bonus_percentage || 50 });
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Fixed Amount (₹)</SelectItem>
+                  <SelectItem value="percentage">Percentage (%)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
+              {formData.bonus_percentage > 0 ? (
+                <div className="space-y-2">
+                  <Label>Bonus Percentage (%)</Label>
+                  <Input type="number" value={formData.bonus_percentage}
+                    onChange={(e) => setFormData({ ...formData, bonus_percentage: Number(e.target.value), bonus_amount: 0 })} />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Bonus Amount (₹)</Label>
+                  <Input type="number" value={formData.bonus_amount}
+                    onChange={(e) => setFormData({ ...formData, bonus_amount: Number(e.target.value), bonus_percentage: 0 })} />
+                </div>
+              )}
               <div className="space-y-2">
-                <Label>Bonus Amount (Fixed ₹)</Label>
-                <Input
-                  type="number"
-                  value={formData.bonus_amount}
-                  onChange={(e) => setFormData({ ...formData, bonus_amount: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>OR Bonus Percentage (%)</Label>
-                <Input
-                  type="number"
-                  value={formData.bonus_percentage}
-                  onChange={(e) => setFormData({ ...formData, bonus_percentage: Number(e.target.value) })}
-                />
+                <Label>Max Bonus Cap (₹)</Label>
+                <Input type="number" value={formData.max_amount}
+                  onChange={(e) => setFormData({ ...formData, max_amount: Number(e.target.value) })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Min Deposit (₹)</Label>
-                <Input
-                  type="number"
-                  value={formData.min_amount}
-                  onChange={(e) => setFormData({ ...formData, min_amount: Number(e.target.value) })}
-                />
+                <Input type="number" value={formData.min_amount}
+                  onChange={(e) => setFormData({ ...formData, min_amount: Number(e.target.value) })} />
               </div>
               <div className="space-y-2">
-                <Label>Max Bonus Cap (₹)</Label>
-                <Input
-                  type="number"
-                  value={formData.max_amount}
-                  onChange={(e) => setFormData({ ...formData, max_amount: Number(e.target.value) })}
-                />
+                <Label>Wagering Multiplier</Label>
+                <Input type="number" value={formData.wagering_multiplier} min={0} step={0.5}
+                  onChange={(e) => setFormData({ ...formData, wagering_multiplier: Number(e.target.value) })} />
+                <p className="text-xs text-muted-foreground">0 = direct credit, &gt;0 = locked until wagered</p>
               </div>
             </div>
           </>
@@ -499,7 +512,7 @@ export default function AdminBonusManagement() {
               <Gift className="h-7 w-7 text-primary" />
               Bonus Management
             </h1>
-            <p className="text-muted-foreground">Create and manage 4 types of bonuses</p>
+            <p className="text-muted-foreground">Create and manage 5 types of bonuses</p>
           </div>
         </div>
 
