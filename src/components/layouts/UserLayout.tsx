@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
 import { useLenis } from '@/hooks/useLenis';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { Button } from '@/components/ui/button';
 import { formatINR } from '@/lib/formatters';
 import { 
@@ -40,6 +41,9 @@ export default function UserLayout({ children }: UserLayoutProps) {
   
   // Enable smooth scrolling
   useLenis();
+  
+  // Track page visits
+  usePageTracking();
 
   const handleSignOut = async () => {
     await signOut();

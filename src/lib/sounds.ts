@@ -13,6 +13,10 @@ export const SOUNDS = {
   // Timer sounds
   tick: 'https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3',
   countdown: 'https://assets.mixkit.co/active_storage/sfx/2008/2008-preview.mp3',
+
+  // Spin wheel sounds
+  spinStart: 'https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3',
+  spinTick: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
 };
 
 // Sound manager with volume control
