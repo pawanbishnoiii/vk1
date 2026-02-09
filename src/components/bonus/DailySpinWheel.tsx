@@ -127,15 +127,15 @@
      },
    });
  
-   const handleSpin = async () => {
-     if (isSpinning || !canSpin || !user) return;
-     
-     setIsSpinning(true);
-     setWonPrize(null);
-     soundManager.play(SOUNDS.click);
-     
-     // Select winning prize
-     const { prize, index } = selectPrize();
+  const handleSpin = async () => {
+    if (isSpinning || !canSpin || !user) return;
+    
+    setIsSpinning(true);
+    setWonPrize(null);
+    soundManager.play(SOUNDS.spinStart);
+    
+    // Select winning prize
+    const { prize, index } = selectPrize();
      
      // Calculate rotation
      // The wheel needs to rotate to land on the selected segment
